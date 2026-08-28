@@ -615,7 +615,7 @@ table.grid-table td{
   <div id="tab-roster" style="display:none;">
     <div class="card">
       <h2>Reporting Team</h2>
-      <div class="hint">Set a unique PIN for each manager — that PIN is their login. A person with a blank PIN cannot log in. Mark Direct (reports to you) or Indirect.</div>
+      <div class="hint">Set a PIN for each manager — that PIN plus their name is their login (same PIN for two people is fine). A person with a blank PIN cannot log in. Mark Direct (reports to you) or Indirect.</div>
       <div class="roster-list" id="rosterList"></div>
       <button class="small-btn" id="addRosterBtn">+ Add Person</button>
     </div>
@@ -862,10 +862,7 @@ function renderRosterList(){
     roster[e.target.dataset.i].type = e.target.value; saveRoster();
   }));
   box.querySelectorAll('.rpin').forEach(inp=>inp.addEventListener('change', e=>{
-    const v = e.target.value.trim();
-    const dup = roster.some((p,idx)=>idx!==Number(e.target.dataset.i) && p.pin && p.pin===v);
-    if(v && dup){ alert('That PIN is already used by someone else. Pick a unique PIN.'); e.target.value = roster[e.target.dataset.i].pin || ''; return; }
-    roster[e.target.dataset.i].pin = v; saveRoster();
+    roster[e.target.dataset.i].pin = e.target.value.trim(); saveRoster();
   }));
   box.querySelectorAll('.rdel').forEach(btn=>btn.addEventListener('click', e=>{
     if(!confirm('Remove this person? Their old logs stay in the sheet.')) return;
