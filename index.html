@@ -641,7 +641,9 @@ function setSyncNote(msg){
 }
 
 async function apiGet(loginId, pin){
-  const res = await fetch(API_URL + '?id=' + encodeURIComponent(loginId) + '&pin=' + encodeURIComponent(pin));
+  // &t=timestamp defeats browser/proxy caching of Apps Script GET responses —
+  // without it, a reopened app can load a stale morning snapshot of the data.
+  const res = await fetch(API_URL + '?id=' + encodeURIComponent(loginId) + '&pin=' + encodeURIComponent(pin) + '&t=' + Date.now(), {cache:'no-store'});
   if(!res.ok) throw new Error('NETWORK');
   const data = await res.json();
   if(!data.ok) throw new Error(data.error || 'SERVER');
@@ -652,7 +654,7 @@ async function apiGet(loginId, pin){
 async function loadLoginNames(){
   const sel = document.getElementById('loginName');
   try{
-    const res = await fetch(API_URL + '?list=names');
+    const res = await fetch(API_URL + '?list=names&t=' + Date.now(), {cache:'no-store'});
     const data = await res.json();
     if(!data.ok) throw new Error();
     sel.innerHTML = `<option value="">— Select your name —</option>` +
@@ -819,8 +821,9 @@ async function openTab(tabId, btnEl){
     if(el) el.style.display = (t===tabId)?'block':'none';
   });
 
-  // refresh from sheet for the data-heavy views
-  if(['team','dash','ceo','mystats'].includes(tabId)){
+  // refresh from sheet for the data-heavy views (and My Day, so a phone
+  // kept open all day never shows a stale morning snapshot)
+  if(['team','dash','ceo','mystats','log'].includes(tabId)){
     try{ await refreshData(); }
     catch(e){ setSyncNote('Could not refresh from Google Sheet — showing last loaded data.'); }
   }
