@@ -74,6 +74,18 @@ header.top{
   text-transform:uppercase;
   margin-top:2px;
 }
+.who{
+  text-align:right;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+}
+.who .wname{font-weight:600; font-size:11px; color:var(--ink); display:block;}
+.who button{
+  background:none; border:1px solid var(--line); border-radius:5px;
+  font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--flag);
+  padding:3px 8px; margin-top:4px; cursor:pointer;
+}
 .tabs{
   display:flex;
   gap:0;
@@ -133,7 +145,7 @@ label{
   margin-bottom:5px;
   margin-top:10px;
 }
-select, input[type=date], input[type=time], input[type=text]{
+select, input[type=date], input[type=time], input[type=text], input[type=password]{
   width:100%;
   padding:10px 10px;
   border:1.5px solid var(--line);
@@ -301,6 +313,10 @@ table.grid-table td{
 .roster-item input[type=text]{flex:1; padding:7px 8px; font-size:13px;}
 .roster-item select{width:100px; padding:7px 6px; font-size:12px;}
 .roster-item button{background:none; border:none; color:var(--flag); font-size:17px; cursor:pointer;}
+.roster-item .rpin{
+  width:64px !important; flex:none !important;
+  font-family:'IBM Plex Mono',monospace; text-align:center; letter-spacing:2px;
+}
 .small-btn{
   padding:9px; background:var(--paper); border:1.5px dashed var(--ink-soft); border-radius:7px; font-weight:600; font-size:12.5px; cursor:pointer; color:var(--ink-soft); width:100%; margin-top:8px;
 }
@@ -336,10 +352,11 @@ table.grid-table td{
   margin-top:4px;
 }
 .kpi-strip{
-  display:flex; gap:8px; margin-bottom:14px;
+  display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;
 }
 .kpi{
   flex:1;
+  min-width:90px;
   background:var(--paper);
   border:1px solid var(--line);
   border-radius:8px;
@@ -385,40 +402,87 @@ table.grid-table td{
 }
 .sticky-name .sn-label{color:var(--grey); font-weight:500; text-transform:uppercase; font-size:9.5px; letter-spacing:1px;}
 .sync-note{
-  font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--grey); text-align:center; margin-bottom:10px;
+  font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--grey); text-align:center; margin-bottom:10px; min-height:12px;
 }
+
+/* ---- LOGIN ---- */
+.login-wrap{
+  max-width:360px; margin:10vh auto 0; position:relative; z-index:1; padding:0 16px;
+}
+.login-card{
+  background:var(--white); border:1.5px solid var(--ink); border-radius:12px;
+  padding:26px 22px; box-shadow:4px 4px 0 rgba(31,42,36,0.10); text-align:center;
+}
+.login-card .brand{margin-bottom:20px;}
+.pin-input{
+  width:100%; padding:14px; text-align:center; font-family:'IBM Plex Mono',monospace;
+  font-size:22px; letter-spacing:10px; border:1.5px solid var(--line); border-radius:8px;
+  background:var(--paper); margin-top:8px;
+}
+.login-btn{
+  width:100%; margin-top:14px; padding:13px; background:var(--ink); color:var(--paper);
+  border:none; border-radius:7px; font-weight:700; font-size:14.5px; cursor:pointer;
+  font-family:'Fraunces',serif; letter-spacing:0.3px;
+}
+.login-btn:disabled{opacity:0.6; cursor:wait;}
+.login-err{color:var(--flag); font-size:12px; font-weight:600; margin-top:10px; min-height:16px;}
+.login-hint{font-size:11px; color:var(--grey); margin-top:14px; line-height:1.5;}
+
+/* ---- CEO time bars ---- */
+.tbar-row{margin-bottom:10px;}
+.tbar-head{
+  display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:3px;
+}
+.tbar-head .tb-name{font-weight:600;}
+.tbar-head .tb-val{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft);}
+.tbar-track{
+  height:14px; background:var(--paper); border:1px solid var(--line); border-radius:4px; overflow:hidden;
+}
+.tbar-fill{height:100%;}
+.delta{font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; margin-left:6px;}
 </style>
 </head>
 <body>
 <div class="bg-grid"></div>
-<div class="wrap">
+
+<!-- ================= LOGIN SCREEN ================= -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-card">
+    <div class="brand">Mangalam Landmarks<small>Daily Ground Report</small></div>
+    <span class="eyebrow">Enter your PIN</span>
+    <input type="password" class="pin-input" id="pinInput" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="····">
+    <button class="login-btn" id="loginBtn">Login</button>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-hint">Managers: use the PIN given to you — you'll see your own log and your own stats.<br>Don't have a PIN? Ask the CEO's office.</div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="wrap" id="appScreen" style="display:none;">
 
   <header class="top">
     <div class="brand">Mangalam Landmarks<small>Daily Ground Report</small></div>
+    <div class="who">
+      <span class="wname" id="whoName">—</span>
+      <span id="whoRole">—</span><br>
+      <button id="logoutBtn">Logout</button>
+    </div>
   </header>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="log">My Day</button>
-    <button class="tab-btn" data-tab="team">Team View</button>
-    <button class="tab-btn" data-tab="dash">Dashboard</button>
-    <button class="tab-btn" data-tab="roster">Team List</button>
-  </div>
+  <div class="tabs" id="tabBar"></div>
 
   <div class="sync-note" id="syncNote"></div>
 
-  <!-- LOG TAB -->
-  <div id="tab-log">
+  <!-- LOG TAB (managers) -->
+  <div id="tab-log" style="display:none;">
     <div class="sticky-name" id="stickyName">
       <span class="sn-label">Logging as</span>
       <span id="stickyNameValue">—</span>
     </div>
     <div class="card">
-      <span class="eyebrow">Who's logging</span>
-      <select id="logPerson"></select>
-
       <div class="row2">
         <div>
-          <label>Date</label>
+          <label style="margin-top:0;">Date</label>
           <input type="date" id="logDate">
         </div>
       </div>
@@ -442,7 +506,25 @@ table.grid-table td{
     </div>
   </div>
 
-  <!-- TEAM TAB -->
+  <!-- MY STATS TAB (managers) -->
+  <div id="tab-mystats" style="display:none;">
+    <div class="card">
+      <h2>My Scorecard</h2>
+      <div class="kpi-strip" id="myKpis"></div>
+      <span class="eyebrow">My efficiency — last 6 weeks + projection</span>
+      <div class="chart-box"><canvas id="myTrendChart" height="180"></canvas></div>
+      <div class="hint">Efficiency % = productive time (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting) ÷ total logged time. Discipline % = days you submitted a report. Dashed segment is a projection from your recent trend.</div>
+    </div>
+    <div class="card">
+      <span class="eyebrow">My time split — this week</span>
+      <div class="donut-wrap">
+        <canvas id="myDonutChart" width="130" height="130"></canvas>
+        <div class="legend" id="myDonutLegend" style="flex-direction:column; align-items:flex-start;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM TAB (CEO) -->
   <div id="tab-team" style="display:none;">
     <div class="card">
       <div class="nav-week">
@@ -462,7 +544,7 @@ table.grid-table td{
     </div>
   </div>
 
-  <!-- DASHBOARD TAB -->
+  <!-- DASHBOARD TAB (CEO) -->
   <div id="tab-dash" style="display:none;">
     <div class="card">
       <h2>Predictive Efficiency Dashboard</h2>
@@ -503,11 +585,33 @@ table.grid-table td{
     </div>
   </div>
 
-  <!-- ROSTER TAB -->
+  <!-- CEO VIEW TAB -->
+  <div id="tab-ceo" style="display:none;">
+    <div class="card">
+      <h2>CEO Command View — This Week</h2>
+      <div class="kpi-strip" id="ceoKpis"></div>
+      <span class="eyebrow">Where the time is going (vs last week)</span>
+      <div id="ceoBars" style="margin-top:8px;"></div>
+      <div class="hint">Delta compares this week's share of each category against last week. ▲ share growing, ▼ share shrinking.</div>
+    </div>
+
+    <div class="card">
+      <h2>Leadership Time Ledger</h2>
+      <div class="hint" style="margin-top:0;">This week, sorted by hours logged. "Top use" is where each person spent the most time.</div>
+      <table class="pred-table" id="ceoLedger"></table>
+    </div>
+
+    <div class="card">
+      <h2>Needs Attention</h2>
+      <div id="ceoFlags"></div>
+    </div>
+  </div>
+
+  <!-- ROSTER TAB (CEO) -->
   <div id="tab-roster" style="display:none;">
     <div class="card">
       <h2>Reporting Team</h2>
-      <div class="hint">Everyone picks their own name from this list on the "My Day" tab. Mark Direct (reports to you) or Indirect.</div>
+      <div class="hint">Set a unique PIN for each manager — that PIN is their login. A person with a blank PIN cannot log in. Mark Direct (reports to you) or Indirect.</div>
       <div class="roster-list" id="rosterList"></div>
       <button class="small-btn" id="addRosterBtn">+ Add Person</button>
     </div>
@@ -522,45 +626,49 @@ table.grid-table td{
 // Paste your Apps Script Web App URL here (Deploy → Web app → Anyone):
 const API_URL = 'https://script.google.com/macros/s/AKfycbzfInhfIbpP1NsL6pM16C7UVwUVDu28dX8WyXEftc9ZTbbaLN3co6H8FmTpo5y5QRp6/exec';
 
-// All data lives in the Google Sheet. On load (and each time you open
-// Team View / Dashboard) the app pulls roster + all logs in ONE call,
-// caches them in logsIndex, and every view reads from that cache.
+// Auth: PIN is validated by Apps Script. A manager's PIN returns only their
+// own logs; the CEO PIN (set inside Code.gs) returns everything.
 
-let logsIndex = {}; // key `${personId}|${date}` -> blocks array
+let auth = null;          // {pin, role:'ceo'|'manager', person:{id,name,role,type}|null}
+let logsIndex = {};       // `${personId}|${date}` -> blocks array
 
 function setSyncNote(msg){
   document.getElementById('syncNote').textContent = msg || '';
 }
 
-async function apiGet(){
-  const res = await fetch(API_URL);
-  if(!res.ok) throw new Error('Network error ' + res.status);
+async function apiGet(pin){
+  const res = await fetch(API_URL + '?pin=' + encodeURIComponent(pin));
+  if(!res.ok) throw new Error('NETWORK');
   const data = await res.json();
-  if(!data.ok) throw new Error(data.error || 'Server error');
+  if(!data.ok) throw new Error(data.error || 'SERVER');
   return data;
 }
 
 async function apiPost(payload){
-  // text/plain body avoids the CORS preflight that Apps Script can't answer
+  payload.pin = auth.pin;
   const res = await fetch(API_URL, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify(payload)
   });
-  if(!res.ok) throw new Error('Network error ' + res.status);
+  if(!res.ok) throw new Error('NETWORK');
   const data = await res.json();
-  if(!data.ok) throw new Error(data.error || 'Server error');
+  if(!data.ok) throw new Error(data.error || 'SERVER');
   return data;
 }
 
-async function refreshData(){
-  setSyncNote('Syncing with Google Sheet…');
-  const data = await apiGet();
+function ingest(data){
   roster = data.roster || [];
   logsIndex = {};
   (data.logs || []).forEach(l=>{
     logsIndex[l.personId + '|' + l.date] = l.blocks || [];
   });
+}
+
+async function refreshData(){
+  setSyncNote('Syncing with Google Sheet…');
+  const data = await apiGet(auth.pin);
+  ingest(data);
   setSyncNote('');
 }
 // =========================================================
@@ -575,19 +683,6 @@ const CATS = [
 ];
 const catMap = Object.fromEntries(CATS.map(c=>[c.k,c]));
 
-const DEFAULT_ROSTER = [
-  {id:'p_shivam',  name:'Shivam Kashyap',  role:'VP — Sales & Marketing',          type:'Direct'},
-  {id:'p_mukund',  name:'Mukund Patel',    role:'VP — HR',                         type:'Direct'},
-  {id:'p_atul',    name:'Atul Ghatge',     role:'GM — Legal & Purchase',           type:'Direct'},
-  {id:'p_deepak',  name:'Deepak Shinde',   role:'GM — Accounts & Finance',         type:'Direct'},
-  {id:'p_upendra', name:'Upendra Gulve',   role:'GM — Engineering',                type:'Direct'},
-  {id:'p_amol',    name:'Amol Kalokhe',    role:'GM — CBD',                        type:'Indirect'},
-  {id:'p_nikhil',  name:'Nikhil',          role:'Engineering Coordination',        type:'Indirect'},
-  {id:'p_saurabh', name:'Saurabh Sakore',  role:'Manager — Legal & Liaisoning',    type:'Indirect'},
-  {id:'p_vijay',   name:'Vijay Bhalekar',  role:'AGM — Engineering',               type:'Indirect'},
-  {id:'p_dinesh',  name:'Dinesh Chavan',   role:'GM — Engineering',                type:'Indirect'}
-];
-
 let roster = [];
 let selectedCat = 'meeting';
 let blocks = [];
@@ -596,26 +691,123 @@ let weekOffset = 0;
 function pad(n){return n.toString().padStart(2,'0');}
 function todayStr(){const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 function fmtHM(mins){const h=Math.floor(mins/60), m=Math.round(mins%60); return `${h}h ${m}m`;}
+function fmtH(mins){return (mins/60).toFixed(1)+'h';}
 function timeToMin(t){if(!t)return 0; const [h,m]=t.split(':').map(Number); return h*60+m;}
 
+// ================= LOGIN =================
+const AUTH_KEY = 'dgr_auth_v2';
+
+async function tryLogin(pin, silent){
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  btn.disabled = true; err.textContent = silent ? '' : 'Checking…';
+  try{
+    const data = await apiGet(pin);
+    auth = {pin, role: data.role, person: data.person};
+    sessionStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+    ingest(data);
+    enterApp();
+  }catch(e){
+    auth = null;
+    sessionStorage.removeItem(AUTH_KEY);
+    if(String(e.message) === 'INVALID_PIN'){
+      err.textContent = silent ? '' : 'Wrong PIN. Try again.';
+    } else {
+      err.textContent = 'Could not reach the server. Check internet / API_URL.';
+    }
+    document.getElementById('loginScreen').style.display = 'block';
+  }
+  btn.disabled = false;
+}
+
+document.getElementById('loginBtn').addEventListener('click', ()=>{
+  const pin = document.getElementById('pinInput').value.trim();
+  if(!pin){ document.getElementById('loginErr').textContent = 'Enter your PIN.'; return; }
+  tryLogin(pin, false);
+});
+document.getElementById('pinInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('loginBtn').click();
+});
+
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  auth = null;
+  sessionStorage.removeItem(AUTH_KEY);
+  document.getElementById('pinInput').value = '';
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'block';
+});
+
+// ================= ROLE-BASED SHELL =================
+const MANAGER_TABS = [
+  {id:'log', label:'My Day'},
+  {id:'mystats', label:'My Stats'}
+];
+const CEO_TABS = [
+  {id:'team', label:'Team View'},
+  {id:'ceo', label:'CEO View'},
+  {id:'dash', label:'Dashboard'},
+  {id:'roster', label:'Team List'}
+];
+const ALL_TAB_IDS = ['log','mystats','team','dash','ceo','roster'];
+
+function enterApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+
+  const isCeo = auth.role === 'ceo';
+  document.getElementById('whoName').textContent = isCeo ? 'CEO' : auth.person.name;
+  document.getElementById('whoRole').textContent = isCeo ? 'Full access' : (auth.person.role || auth.person.type);
+
+  const tabs = isCeo ? CEO_TABS : MANAGER_TABS;
+  const bar = document.getElementById('tabBar');
+  bar.innerHTML = tabs.map((t,i)=>`<button class="tab-btn ${i===0?'active':''}" data-tab="${t.id}">${t.label}</button>`).join('');
+  bar.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>openTab(btn.dataset.tab, btn));
+  });
+
+  if(!isCeo){
+    document.getElementById('stickyNameValue').textContent = `${auth.person.name} — ${auth.person.role || auth.person.type}`;
+    renderChips();
+    document.getElementById('logDate').value = todayStr();
+    loadExistingLog();
+  } else {
+    renderRosterList();
+  }
+
+  // open first tab
+  openTab(tabs[0].id, bar.querySelector('.tab-btn'));
+}
+
+async function openTab(tabId, btnEl){
+  document.querySelectorAll('#tabBar .tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btnEl) btnEl.classList.add('active');
+  ALL_TAB_IDS.forEach(t=>{
+    const el = document.getElementById('tab-'+t);
+    if(el) el.style.display = (t===tabId)?'block':'none';
+  });
+
+  // refresh from sheet for the data-heavy views
+  if(['team','dash','ceo','mystats'].includes(tabId)){
+    try{ await refreshData(); }
+    catch(e){ setSyncNote('Could not refresh from Google Sheet — showing last loaded data.'); }
+  }
+
+  if(tabId==='team') renderTeamGrid();
+  if(tabId==='dash') renderDashboard();
+  if(tabId==='ceo') renderCEO();
+  if(tabId==='mystats') renderMyStats();
+  if(tabId==='roster') renderRosterList();
+  if(tabId==='log') loadExistingLog();
+}
+
+// ================= ROSTER (CEO) =================
 async function saveRoster(){
   try{
     await apiPost({action:'saveRoster', roster});
+    setSyncNote('');
   }catch(e){
     setSyncNote('Roster save failed — check connection and retry.');
   }
-}
-
-function renderRosterSelect(){
-  const sel = document.getElementById('logPerson');
-  sel.innerHTML = roster.length ? roster.map(p=>`<option value="${p.id}">${p.name} — ${p.role||p.type}</option>`).join('') : `<option value="">Add your name in Team List tab first</option>`;
-  updateStickyName();
-}
-
-function updateStickyName(){
-  const sel = document.getElementById('logPerson');
-  const opt = sel.options[sel.selectedIndex];
-  document.getElementById('stickyNameValue').textContent = opt ? opt.text : '—';
 }
 
 function renderRosterList(){
@@ -624,36 +816,46 @@ function renderRosterList(){
   box.innerHTML = roster.map((p,i)=>`
     <div class="roster-item">
       <div style="flex:1;">
-        <input type="text" value="${p.name}" data-i="${i}" class="rname" placeholder="Name" style="margin-bottom:5px;">
+        <input type="text" value="${p.name||''}" data-i="${i}" class="rname" placeholder="Name" style="margin-bottom:5px;">
         <input type="text" value="${p.role||''}" data-i="${i}" class="rrole" placeholder="Role / Department">
       </div>
-      <select data-i="${i}" class="rtype">
-        <option value="Direct" ${p.type==='Direct'?'selected':''}>Direct</option>
-        <option value="Indirect" ${p.type==='Indirect'?'selected':''}>Indirect</option>
-      </select>
+      <div>
+        <select data-i="${i}" class="rtype" style="margin-bottom:5px;">
+          <option value="Direct" ${p.type==='Direct'?'selected':''}>Direct</option>
+          <option value="Indirect" ${p.type==='Indirect'?'selected':''}>Indirect</option>
+        </select>
+        <input type="text" value="${p.pin||''}" data-i="${i}" class="rpin" placeholder="PIN" maxlength="6" inputmode="numeric">
+      </div>
       <button data-i="${i}" class="rdel">✕</button>
     </div>
   `).join('');
   box.querySelectorAll('.rname').forEach(inp=>inp.addEventListener('change', e=>{
-    roster[e.target.dataset.i].name = e.target.value; saveRoster(); renderRosterSelect();
+    roster[e.target.dataset.i].name = e.target.value; saveRoster();
   }));
   box.querySelectorAll('.rrole').forEach(inp=>inp.addEventListener('change', e=>{
-    roster[e.target.dataset.i].role = e.target.value; saveRoster(); renderRosterSelect();
+    roster[e.target.dataset.i].role = e.target.value; saveRoster();
   }));
   box.querySelectorAll('.rtype').forEach(sel=>sel.addEventListener('change', e=>{
-    roster[e.target.dataset.i].type = e.target.value; saveRoster(); renderRosterSelect();
+    roster[e.target.dataset.i].type = e.target.value; saveRoster();
+  }));
+  box.querySelectorAll('.rpin').forEach(inp=>inp.addEventListener('change', e=>{
+    const v = e.target.value.trim();
+    const dup = roster.some((p,idx)=>idx!==Number(e.target.dataset.i) && p.pin && p.pin===v);
+    if(v && dup){ alert('That PIN is already used by someone else. Pick a unique PIN.'); e.target.value = roster[e.target.dataset.i].pin || ''; return; }
+    roster[e.target.dataset.i].pin = v; saveRoster();
   }));
   box.querySelectorAll('.rdel').forEach(btn=>btn.addEventListener('click', e=>{
-    roster.splice(e.target.dataset.i,1); saveRoster(); renderRosterList(); renderRosterSelect();
+    if(!confirm('Remove this person? Their old logs stay in the sheet.')) return;
+    roster.splice(e.target.dataset.i,1); saveRoster(); renderRosterList();
   }));
 }
 
 document.getElementById('addRosterBtn').addEventListener('click', ()=>{
-  roster.push({id:'p'+Date.now(), name:'', role:'', type:'Direct'});
+  roster.push({id:'p'+Date.now(), name:'', role:'', type:'Direct', pin:''});
   saveRoster(); renderRosterList();
 });
 
-// ---- CHIPS ----
+// ================= CHIPS =================
 function renderChips(){
   const box = document.getElementById('catChips');
   box.innerHTML = CATS.map(c=>`<button type="button" class="chip ${c.k===selectedCat?'sel':''}" data-k="${c.k}" style="${c.k===selectedCat?`background:${c.color};border-color:${c.color};`:''}">${c.label}</button>`).join('');
@@ -662,9 +864,7 @@ function renderChips(){
   }));
 }
 
-// ---- LOG TAB ----
-document.getElementById('logDate').value = todayStr();
-
+// ================= LOG TAB (managers) =================
 document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   const start = document.getElementById('blkStart').value;
   const end = document.getElementById('blkEnd').value;
@@ -696,18 +896,15 @@ function renderBlocks(){
 }
 
 document.getElementById('saveDayBtn').addEventListener('click', async ()=>{
-  const personId = document.getElementById('logPerson').value;
   const date = document.getElementById('logDate').value;
-  if(!personId){ alert('Select your name first (add it in Team List tab if missing).'); return; }
   if(!blocks.length){ alert('Add at least one block before saving.'); return; }
   const btn = document.getElementById('saveDayBtn');
   const st = document.getElementById('saveStatus');
-  const person = roster.find(p=>p.id===personId);
   btn.disabled = true;
   st.innerHTML = `<div class="status-msg sync">Saving to Google Sheet…</div>`;
   try{
-    await apiPost({action:'saveLog', personId, personName: person ? person.name : '', date, blocks});
-    logsIndex[personId + '|' + date] = blocks.slice();
+    await apiPost({action:'saveLog', personId: auth.person.id, personName: auth.person.name, date, blocks});
+    logsIndex[auth.person.id + '|' + date] = blocks.slice();
     st.innerHTML = `<div class="status-msg ok">Saved for ${date}. Thank you.</div>`;
     setTimeout(()=>{st.innerHTML='';}, 3500);
   }catch(e){
@@ -717,31 +914,14 @@ document.getElementById('saveDayBtn').addEventListener('click', async ()=>{
 });
 
 function loadExistingLog(){
-  const personId = document.getElementById('logPerson').value;
+  if(!auth || auth.role!=='manager') return;
   const date = document.getElementById('logDate').value;
-  if(!personId) return;
-  blocks = (logsIndex[personId + '|' + date] || []).slice();
+  blocks = (logsIndex[auth.person.id + '|' + date] || []).slice();
   renderBlocks();
 }
-document.getElementById('logPerson').addEventListener('change', ()=>{ loadExistingLog(); updateStickyName(); });
 document.getElementById('logDate').addEventListener('change', loadExistingLog);
 
-// ---- TABS ----
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    ['log','team','dash','roster'].forEach(t=>document.getElementById('tab-'+t).style.display = (t===btn.dataset.tab)?'block':'none');
-    if(btn.dataset.tab==='team' || btn.dataset.tab==='dash'){
-      try{ await refreshData(); renderRosterSelect(); }
-      catch(e){ setSyncNote('Could not refresh from Google Sheet — showing last loaded data.'); }
-    }
-    if(btn.dataset.tab==='team') renderTeamGrid();
-    if(btn.dataset.tab==='dash') renderDashboard();
-  });
-});
-
-// ---- TEAM VIEW ----
+// ================= SHARED CALC HELPERS =================
 function getMonday(offset){
   const d = new Date();
   d.setDate(d.getDate() + offset*7);
@@ -760,6 +940,68 @@ function weekDates(offset){
 }
 const DAY_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
+function getBlocks(personId, date){
+  return logsIndex[personId + '|' + date] || null;
+}
+
+function weekStats(personIds, dates){
+  let totalMin=0, idleMin=0, catMin={}; CATS.forEach(c=>catMin[c.k]=0);
+  let submittedCount=0;
+  personIds.forEach(pid=>dates.forEach(d=>{
+    const blks = getBlocks(pid, d);
+    if(blks && blks.length){
+      submittedCount++;
+      blks.forEach(b=>{
+        totalMin += b.dur;
+        catMin[b.cat] = (catMin[b.cat]||0) + b.dur;
+      });
+    }
+  }));
+  idleMin = catMin['other']||0;
+  return {totalMin, idleMin, catMin, submittedCount, slots: personIds.length*dates.length};
+}
+
+function linRegress(points){
+  const n = points.length;
+  if(n<2) return null;
+  const sx = points.reduce((s,p)=>s+p.x,0);
+  const sy = points.reduce((s,p)=>s+p.y,0);
+  const sxy = points.reduce((s,p)=>s+p.x*p.y,0);
+  const sxx = points.reduce((s,p)=>s+p.x*p.x,0);
+  const denom = (n*sxx - sx*sx);
+  if(denom===0) return null;
+  const slope = (n*sxy - sx*sy)/denom;
+  const intercept = (sy - slope*sx)/n;
+  return {slope, intercept};
+}
+
+function buildWeeklyHistory(personIds, weeksBack){
+  const history = [];
+  for(let i=weeksBack-1; i>=0; i--){
+    const dates = weekDates(-i);
+    const stats = weekStats(personIds, dates);
+    const eff = stats.totalMin>0 ? Math.round(((stats.totalMin - stats.idleMin)/stats.totalMin)*100) : null;
+    const mon = new Date(dates[0]);
+    history.push({label: mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'}), eff, stats, dates});
+  }
+  return history;
+}
+
+function trendLabel(slope){
+  if(slope===null) return {text:'Not enough data', cls:'trend-flat', arrow:'—'};
+  if(slope > 1.5) return {text:'Improving', cls:'trend-up', arrow:'▲'};
+  if(slope < -1.5) return {text:'Declining', cls:'trend-down', arrow:'▼'};
+  return {text:'Stable', cls:'trend-flat', arrow:'→'};
+}
+
+// Days elapsed in the current week (Mon..today), for fair discipline math
+function daysElapsedThisWeek(){
+  const mon = getMonday(0);
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.min(7, Math.floor((now - mon)/86400000) + 1);
+}
+
+// ================= TEAM VIEW (CEO) =================
 document.getElementById('prevWeek').addEventListener('click', ()=>{weekOffset--; renderTeamGrid();});
 document.getElementById('nextWeek').addEventListener('click', ()=>{weekOffset++; renderTeamGrid();});
 
@@ -776,13 +1018,10 @@ function renderTeamGrid(){
     return;
   }
 
-  // read all logs for this week from the cached index (one Sheet call happened on tab open)
   const dataByPerson = {};
   for(const p of roster){
     dataByPerson[p.id] = {};
-    for(const d of dates){
-      dataByPerson[p.id][d] = logsIndex[p.id + '|' + d] || null;
-    }
+    for(const d of dates) dataByPerson[p.id][d] = getBlocks(p.id, d);
   }
 
   let html = '<tr><th style="text-align:left;">Name</th>' + DAY_LABELS.map(l=>`<th>${l}</th>`).join('') + '</tr>';
@@ -806,8 +1045,7 @@ function renderTeamGrid(){
     td.addEventListener('click', ()=>{
       const pid = td.dataset.p, d = td.dataset.d;
       const person = roster.find(x=>x.id===pid);
-      const blks = dataByPerson[pid][d];
-      showDetailModal(person, d, blks);
+      showDetailModal(person, d, dataByPerson[pid][d]);
     });
   });
 
@@ -873,8 +1111,8 @@ function renderInsights(dataByPerson, dates){
   }).join('');
 }
 
-// ---- PREDICTIVE DASHBOARD ----
-let trendChartInst=null, donutChartInst=null;
+// ================= DASHBOARD (CEO) =================
+let trendChartInst=null, donutChartInst=null, myTrendInst=null, myDonutInst=null;
 
 function populateDashView(){
   const sel = document.getElementById('dashView');
@@ -882,63 +1120,6 @@ function populateDashView(){
   sel.innerHTML = `<option value="team">Whole Team (avg)</option>` +
     roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   if([...sel.options].some(o=>o.value===current)) sel.value = current;
-}
-
-function fetchPersonDateBlocks(personId, date){
-  return logsIndex[personId + '|' + date] || null;
-}
-
-// Aggregate one week's stats across a set of person ids
-function weekStats(personIds, dates){
-  let totalMin=0, idleMin=0, catMin={}; CATS.forEach(c=>catMin[c.k]=0);
-  let submittedCount=0;
-  personIds.forEach(pid=>dates.forEach(d=>{
-    const blks = fetchPersonDateBlocks(pid, d);
-    if(blks && blks.length){
-      submittedCount++;
-      blks.forEach(b=>{
-        totalMin += b.dur;
-        catMin[b.cat] = (catMin[b.cat]||0) + b.dur;
-      });
-    }
-  }));
-  idleMin = catMin['other']||0;
-  return {totalMin, idleMin, catMin, submittedCount, slots: personIds.length*dates.length};
-}
-
-function linRegress(points){
-  // points: [{x,y}], returns {slope, intercept}
-  const n = points.length;
-  if(n<2) return null;
-  const sx = points.reduce((s,p)=>s+p.x,0);
-  const sy = points.reduce((s,p)=>s+p.y,0);
-  const sxy = points.reduce((s,p)=>s+p.x*p.y,0);
-  const sxx = points.reduce((s,p)=>s+p.x*p.x,0);
-  const denom = (n*sxx - sx*sx);
-  if(denom===0) return null;
-  const slope = (n*sxy - sx*sy)/denom;
-  const intercept = (sy - slope*sx)/n;
-  return {slope, intercept};
-}
-
-function buildWeeklyHistory(personIds, weeksBack){
-  const history = [];
-  for(let i=weeksBack-1; i>=0; i--){
-    const offset = -i;
-    const dates = weekDates(offset);
-    const stats = weekStats(personIds, dates);
-    const eff = stats.totalMin>0 ? Math.round(((stats.totalMin - stats.idleMin)/stats.totalMin)*100) : null;
-    const mon = new Date(dates[0]);
-    history.push({label: mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'}), eff, stats, dates});
-  }
-  return history;
-}
-
-function trendLabel(slope){
-  if(slope===null) return {text:'Not enough data', cls:'trend-flat', arrow:'—'};
-  if(slope > 1.5) return {text:'Improving', cls:'trend-up', arrow:'▲'};
-  if(slope < -1.5) return {text:'Declining', cls:'trend-down', arrow:'▼'};
-  return {text:'Stable', cls:'trend-flat', arrow:'→'};
 }
 
 function renderDashboard(){
@@ -957,7 +1138,6 @@ function renderDashboard(){
   const actualPts = history.map((h,i)=>({x:i, y:h.eff})).filter(p=>p.y!==null);
   const reg = linRegress(actualPts);
 
-  // ---- KPI strip ----
   const lastWithData = [...history].reverse().find(h=>h.eff!==null);
   const kpiEff = lastWithData ? lastWithData.eff+'%' : '—';
   const tr = reg ? trendLabel(reg.slope) : trendLabel(null);
@@ -969,7 +1149,6 @@ function renderDashboard(){
     <div class="kpi"><div class="num">${submitRate}</div><div class="lbl">Days Reported</div></div>
   `;
 
-  // ---- Trend chart (actual + 2-week projection) ----
   const labels = history.map(h=>h.label);
   let projLabels = [], projValues = [];
   if(reg && actualPts.length>=2){
@@ -1008,7 +1187,6 @@ function renderDashboard(){
     }
   });
 
-  // ---- Donut for most recent week with data ----
   const donutCtx = document.getElementById('donutChart').getContext('2d');
   if(donutChartInst) donutChartInst.destroy();
   const legendBox = document.getElementById('donutLegend');
@@ -1024,7 +1202,6 @@ function renderDashboard(){
     legendBox.innerHTML = `<div class="empty-note">No data yet for a recent week.</div>`;
   }
 
-  // ---- Predictive "who to watch" table (always whole team) ----
   const rows = [];
   for(const p of roster){
     const h = buildWeeklyHistory([p.id], weeksBack);
@@ -1056,21 +1233,199 @@ function renderDashboard(){
 document.getElementById('dashView').addEventListener('change', renderDashboard);
 document.getElementById('dashWeeks').addEventListener('change', renderDashboard);
 
-// ---- INIT ----
-(async function init(){
-  renderChips();
-  try{
-    await refreshData();
-  }catch(e){
-    setSyncNote('Could not reach the Google Sheet backend. Check the API_URL at the top of the code and your internet connection.');
+// ================= MY STATS (manager) =================
+function renderMyStats(){
+  const me = auth.person.id;
+  const thisWk = weekStats([me], weekDates(0));
+  const elapsed = daysElapsedThisWeek();
+
+  // 4-week discipline: days reported / 28 (or elapsed days for current week)
+  let dReported=0, dPossible=0;
+  for(let w=-3; w<=0; w++){
+    const dts = weekDates(w);
+    const lim = (w===0) ? elapsed : 7;
+    for(let i=0;i<lim;i++){
+      dPossible++;
+      const b = getBlocks(me, dts[i]);
+      if(b && b.length) dReported++;
+    }
   }
+  const discipline = dPossible ? Math.round(dReported/dPossible*100) : 0;
+  const effNow = thisWk.totalMin>0 ? Math.round((thisWk.totalMin - thisWk.idleMin)/thisWk.totalMin*100) : null;
+  const avgDay = thisWk.submittedCount>0 ? (thisWk.totalMin/60/thisWk.submittedCount).toFixed(1) : '—';
+
+  document.getElementById('myKpis').innerHTML = `
+    <div class="kpi"><div class="num">${fmtH(thisWk.totalMin)}</div><div class="lbl">Hours This Week</div></div>
+    <div class="kpi"><div class="num">${avgDay}${avgDay!=='—'?'h':''}</div><div class="lbl">Avg / Day</div></div>
+    <div class="kpi"><div class="num">${effNow!==null?effNow+'%':'—'}</div><div class="lbl">Efficiency</div></div>
+    <div class="kpi"><div class="num">${discipline}%</div><div class="lbl">Discipline (4 wk)</div></div>
+  `;
+
+  // Own 6-week trend + projection
+  const history = buildWeeklyHistory([me], 6);
+  const actualPts = history.map((h,i)=>({x:i, y:h.eff})).filter(p=>p.y!==null);
+  const reg = linRegress(actualPts);
+  const labels = history.map(h=>h.label);
+  let projLabels=[], projValues=[];
+  if(reg && actualPts.length>=2){
+    const lastX = actualPts[actualPts.length-1].x;
+    for(let k=1;k<=2;k++){
+      const x = lastX+k;
+      const y = Math.max(0, Math.min(100, Math.round(reg.slope*x + reg.intercept)));
+      const d = new Date(getMonday(x - (history.length-1)));
+      projLabels.push(d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}));
+      projValues.push(y);
+    }
+  }
+  const allLabels=[...labels,...projLabels];
+  const actualData=[...history.map(h=>h.eff), ...projLabels.map(()=>null)];
+  const projData=[...history.map(()=>null)];
+  if(projValues.length){
+    projData[history.length-1]=history[history.length-1].eff;
+    projValues.forEach(v=>projData.push(v));
+  }
+  const ctx = document.getElementById('myTrendChart').getContext('2d');
+  if(myTrendInst) myTrendInst.destroy();
+  myTrendInst = new Chart(ctx, {
+    type:'line',
+    data:{labels:allLabels, datasets:[
+      {label:'Actual', data:actualData, borderColor:'#2B4C5C', backgroundColor:'#2B4C5C', tension:0.25, spanGaps:true, pointRadius:4},
+      {label:'Projected', data:projData, borderColor:'#A9552E', borderDash:[5,4], backgroundColor:'#A9552E', tension:0.25, spanGaps:true, pointRadius:4}
+    ]},
+    options:{responsive:true, plugins:{legend:{labels:{font:{size:10}}}}, scales:{y:{min:0,max:100,ticks:{font:{size:9}}}, x:{ticks:{font:{size:9}}}}}
+  });
+
+  // Own donut, this week
+  const donutCtx = document.getElementById('myDonutChart').getContext('2d');
+  if(myDonutInst) myDonutInst.destroy();
+  const legendBox = document.getElementById('myDonutLegend');
+  if(thisWk.totalMin>0){
+    const dCats = CATS.filter(c=>thisWk.catMin[c.k]>0);
+    myDonutInst = new Chart(donutCtx, {
+      type:'doughnut',
+      data:{labels:dCats.map(c=>c.label), datasets:[{data:dCats.map(c=>thisWk.catMin[c.k]), backgroundColor:dCats.map(c=>c.color), borderWidth:1}]},
+      options:{plugins:{legend:{display:false}}, cutout:'62%'}
+    });
+    legendBox.innerHTML = dCats.map(c=>`<span><i style="background:${c.color}"></i>${c.label} — ${(thisWk.catMin[c.k]/60).toFixed(1)}h</span>`).join('');
+  } else {
+    legendBox.innerHTML = `<div class="empty-note">Nothing logged this week yet. Fill "My Day" first.</div>`;
+  }
+}
+
+// ================= CEO VIEW =================
+function renderCEO(){
   if(!roster.length){
-    roster = DEFAULT_ROSTER.slice();
-    await saveRoster();
+    document.getElementById('ceoKpis').innerHTML = `<div class="empty-note">Add your team first in the Team List tab.</div>`;
+    document.getElementById('ceoBars').innerHTML='';
+    document.getElementById('ceoLedger').innerHTML='';
+    document.getElementById('ceoFlags').innerHTML='';
+    return;
   }
-  renderRosterSelect();
-  renderRosterList();
-  loadExistingLog();
+  const ids = roster.map(p=>p.id);
+  const thisWkDates = weekDates(0);
+  const lastWkDates = weekDates(-1);
+  const cur = weekStats(ids, thisWkDates);
+  const prev = weekStats(ids, lastWkDates);
+  const elapsed = daysElapsedThisWeek();
+
+  // ---- KPIs ----
+  const effNow = cur.totalMin>0 ? Math.round((cur.totalMin-cur.idleMin)/cur.totalMin*100) : null;
+  const meetMin = (cur.catMin['meeting']||0) + (cur.catMin['ho']||0);
+  const meetLoad = cur.totalMin>0 ? Math.round(meetMin/cur.totalMin*100) : null;
+  const disciplinePct = Math.round(cur.submittedCount/(ids.length*elapsed)*100);
+  const avgPerDay = cur.submittedCount>0 ? (cur.totalMin/60/cur.submittedCount).toFixed(1)+'h' : '—';
+  document.getElementById('ceoKpis').innerHTML = `
+    <div class="kpi"><div class="num">${fmtH(cur.totalMin)}</div><div class="lbl">Team Hours (wk)</div></div>
+    <div class="kpi"><div class="num">${avgPerDay}</div><div class="lbl">Avg / Person-Day</div></div>
+    <div class="kpi"><div class="num">${effNow!==null?effNow+'%':'—'}</div><div class="lbl">Team Efficiency</div></div>
+    <div class="kpi"><div class="num">${meetLoad!==null?meetLoad+'%':'—'}</div><div class="lbl">Meeting Load</div></div>
+    <div class="kpi"><div class="num">${disciplinePct}%</div><div class="lbl">Reporting Discipline</div></div>
+  `;
+
+  // ---- Where the time goes (bars + WoW share delta) ----
+  const barsBox = document.getElementById('ceoBars');
+  if(cur.totalMin<=0){
+    barsBox.innerHTML = `<div class="empty-note">No reports yet this week.</div>`;
+  } else {
+    const maxMin = Math.max(...CATS.map(c=>cur.catMin[c.k]||0), 1);
+    barsBox.innerHTML = CATS
+      .map(c=>{
+        const m = cur.catMin[c.k]||0;
+        const shareNow = cur.totalMin>0 ? m/cur.totalMin*100 : 0;
+        const sharePrev = prev.totalMin>0 ? (prev.catMin[c.k]||0)/prev.totalMin*100 : null;
+        let deltaHtml = '';
+        if(sharePrev!==null){
+          const d = shareNow - sharePrev;
+          if(Math.abs(d) >= 1){
+            const up = d>0;
+            deltaHtml = `<span class="delta ${up?'trend-up':'trend-down'}">${up?'▲':'▼'}${Math.abs(d).toFixed(0)}pt</span>`;
+          } else {
+            deltaHtml = `<span class="delta trend-flat">→</span>`;
+          }
+        }
+        return {c, m, shareNow, deltaHtml};
+      })
+      .sort((a,b)=>b.m-a.m)
+      .map(({c,m,shareNow,deltaHtml})=>`
+        <div class="tbar-row">
+          <div class="tbar-head">
+            <span class="tb-name">${c.label}</span>
+            <span class="tb-val">${fmtH(m)} · ${shareNow.toFixed(0)}%${deltaHtml}</span>
+          </div>
+          <div class="tbar-track"><div class="tbar-fill" style="width:${(m/maxMin*100).toFixed(1)}%;background:${c.color};"></div></div>
+        </div>
+      `).join('');
+  }
+
+  // ---- Leadership Time Ledger ----
+  const ledgerRows = roster.map(p=>{
+    const s = weekStats([p.id], thisWkDates);
+    const eff = s.totalMin>0 ? Math.round((s.totalMin-s.idleMin)/s.totalMin*100) : null;
+    let topCat = '—';
+    let topMin = 0;
+    CATS.forEach(c=>{ if((s.catMin[c.k]||0) > topMin){ topMin = s.catMin[c.k]; topCat = c.label; } });
+    return {p, s, eff, topCat, topMin};
+  }).sort((a,b)=>b.s.totalMin - a.s.totalMin);
+
+  document.getElementById('ceoLedger').innerHTML =
+    `<tr><th>Name</th><th>Hours</th><th>Days</th><th>Eff</th><th>Top Use</th></tr>` +
+    ledgerRows.map(r=>`<tr>
+      <td class="pred-name">${r.p.name}<span class="tag" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--grey);font-weight:500;">${r.p.role||r.p.type}</span></td>
+      <td>${r.s.totalMin>0?fmtH(r.s.totalMin):'—'}</td>
+      <td>${r.s.submittedCount}/${elapsed}</td>
+      <td>${r.eff!==null?r.eff+'%':'—'}</td>
+      <td>${r.topMin>0?`${r.topCat} (${fmtH(r.topMin)})`:'—'}</td>
+    </tr>`).join('');
+
+  // ---- Needs Attention ----
+  const flags = [];
+  ledgerRows.forEach(r=>{
+    const missed = elapsed - r.s.submittedCount;
+    if(r.s.submittedCount===0){
+      flags.push({name:r.p.name, msg:`No report at all this week (${elapsed} days elapsed).`});
+      return;
+    }
+    if(missed >= 2) flags.push({name:r.p.name, msg:`Missed ${missed} of ${elapsed} days — reporting discipline slipping.`});
+    const otherShare = r.s.totalMin>0 ? (r.s.catMin['other']||0)/r.s.totalMin : 0;
+    if(otherShare >= 0.25 && r.s.totalMin >= 240) flags.push({name:r.p.name, msg:`${Math.round(otherShare*100)}% of logged time is "Other" — worth asking where it's going.`});
+    const avgH = r.s.totalMin/60/r.s.submittedCount;
+    if(avgH < 6 && r.s.submittedCount >= 2) flags.push({name:r.p.name, msg:`Averaging only ${avgH.toFixed(1)}h logged per reported day.`});
+  });
+  document.getElementById('ceoFlags').innerHTML = flags.length
+    ? flags.map(f=>`<div class="insight-row"><div class="insight-name">${f.name}</div><div class="insight-val" style="text-align:right;">${f.msg}</div></div>`).join('')
+    : `<div class="empty-note">Nothing flagged. Clean week so far.</div>`;
+}
+
+// ================= INIT =================
+(function init(){
+  const saved = sessionStorage.getItem(AUTH_KEY);
+  if(saved){
+    try{
+      const a = JSON.parse(saved);
+      if(a && a.pin){ tryLogin(a.pin, true); return; }
+    }catch(e){}
+  }
+  document.getElementById('loginScreen').style.display = 'block';
 })();
 </script>
 </body>
