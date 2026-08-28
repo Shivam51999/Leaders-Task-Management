@@ -449,11 +449,15 @@ table.grid-table td{
 <div class="login-wrap" id="loginScreen">
   <div class="login-card">
     <div class="brand">Mangalam Landmarks<small>Daily Ground Report</small></div>
-    <span class="eyebrow">Enter your PIN</span>
+    <span class="eyebrow">Select your name</span>
+    <select id="loginName" style="text-align:center; font-weight:600;">
+      <option value="">Loading names…</option>
+    </select>
+    <span class="eyebrow" style="margin-top:14px;">Enter your PIN</span>
     <input type="password" class="pin-input" id="pinInput" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="····">
     <button class="login-btn" id="loginBtn">Login</button>
     <div class="login-err" id="loginErr"></div>
-    <div class="login-hint">Managers: use the PIN given to you — you'll see your own log and your own stats.<br>Don't have a PIN? Ask the CEO's office.</div>
+    <div class="login-hint">Managers: pick your name and use the PIN given to you — you'll see your own log and your own stats.<br>Don't have a PIN? Ask the CEO's office.</div>
   </div>
 </div>
 
@@ -629,22 +633,38 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzfInhfIbpP1NsL6pM16C7U
 // Auth: PIN is validated by Apps Script. A manager's PIN returns only their
 // own logs; the CEO PIN (set inside Code.gs) returns everything.
 
-let auth = null;          // {pin, role:'ceo'|'manager', person:{id,name,role,type}|null}
+let auth = null;          // {loginId, pin, role:'ceo'|'manager', person:{id,name,role,type}|null}
 let logsIndex = {};       // `${personId}|${date}` -> blocks array
 
 function setSyncNote(msg){
   document.getElementById('syncNote').textContent = msg || '';
 }
 
-async function apiGet(pin){
-  const res = await fetch(API_URL + '?pin=' + encodeURIComponent(pin));
+async function apiGet(loginId, pin){
+  const res = await fetch(API_URL + '?id=' + encodeURIComponent(loginId) + '&pin=' + encodeURIComponent(pin));
   if(!res.ok) throw new Error('NETWORK');
   const data = await res.json();
   if(!data.ok) throw new Error(data.error || 'SERVER');
   return data;
 }
 
+// Public name list for the login dropdown (no PIN needed; returns names only)
+async function loadLoginNames(){
+  const sel = document.getElementById('loginName');
+  try{
+    const res = await fetch(API_URL + '?list=names');
+    const data = await res.json();
+    if(!data.ok) throw new Error();
+    sel.innerHTML = `<option value="">— Select your name —</option>` +
+      (data.names||[]).map(p=>`<option value="${p.id}">${p.name} — ${p.role||p.type}</option>`).join('') +
+      `<option value="ceo">CEO — Full Access</option>`;
+  }catch(e){
+    sel.innerHTML = `<option value="">Could not load names — check internet</option><option value="ceo">CEO — Full Access</option>`;
+  }
+}
+
 async function apiPost(payload){
+  payload.loginId = auth.loginId;
   payload.pin = auth.pin;
   const res = await fetch(API_URL, {
     method:'POST',
@@ -667,7 +687,7 @@ function ingest(data){
 
 async function refreshData(){
   setSyncNote('Syncing with Google Sheet…');
-  const data = await apiGet(auth.pin);
+  const data = await apiGet(auth.loginId, auth.pin);
   ingest(data);
   setSyncNote('');
 }
@@ -697,13 +717,13 @@ function timeToMin(t){if(!t)return 0; const [h,m]=t.split(':').map(Number); retu
 // ================= LOGIN =================
 const AUTH_KEY = 'dgr_auth_v2';
 
-async function tryLogin(pin, silent){
+async function tryLogin(loginId, pin, silent){
   const btn = document.getElementById('loginBtn');
   const err = document.getElementById('loginErr');
   btn.disabled = true; err.textContent = silent ? '' : 'Checking…';
   try{
-    const data = await apiGet(pin);
-    auth = {pin, role: data.role, person: data.person};
+    const data = await apiGet(loginId, pin);
+    auth = {loginId, pin, role: data.role, person: data.person};
     sessionStorage.setItem(AUTH_KEY, JSON.stringify(auth));
     ingest(data);
     enterApp();
@@ -711,7 +731,7 @@ async function tryLogin(pin, silent){
     auth = null;
     sessionStorage.removeItem(AUTH_KEY);
     if(String(e.message) === 'INVALID_PIN'){
-      err.textContent = silent ? '' : 'Wrong PIN. Try again.';
+      err.textContent = silent ? '' : 'Wrong PIN for that name. Try again.';
     } else {
       err.textContent = 'Could not reach the server. Check internet / API_URL.';
     }
@@ -721,9 +741,11 @@ async function tryLogin(pin, silent){
 }
 
 document.getElementById('loginBtn').addEventListener('click', ()=>{
+  const loginId = document.getElementById('loginName').value;
   const pin = document.getElementById('pinInput').value.trim();
+  if(!loginId){ document.getElementById('loginErr').textContent = 'Select your name first.'; return; }
   if(!pin){ document.getElementById('loginErr').textContent = 'Enter your PIN.'; return; }
-  tryLogin(pin, false);
+  tryLogin(loginId, pin, false);
 });
 document.getElementById('pinInput').addEventListener('keydown', e=>{
   if(e.key==='Enter') document.getElementById('loginBtn').click();
@@ -735,6 +757,7 @@ document.getElementById('logoutBtn').addEventListener('click', ()=>{
   document.getElementById('pinInput').value = '';
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'block';
+  loadLoginNames(); // pick up any people the CEO added this session
 });
 
 // ================= ROLE-BASED SHELL =================
@@ -1418,11 +1441,12 @@ function renderCEO(){
 
 // ================= INIT =================
 (function init(){
+  loadLoginNames();
   const saved = sessionStorage.getItem(AUTH_KEY);
   if(saved){
     try{
       const a = JSON.parse(saved);
-      if(a && a.pin){ tryLogin(a.pin, true); return; }
+      if(a && a.pin && a.loginId){ tryLogin(a.loginId, a.pin, true); return; }
     }catch(e){}
   }
   document.getElementById('loginScreen').style.display = 'block';
