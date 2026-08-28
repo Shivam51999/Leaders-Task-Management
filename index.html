@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mangalam Landmarks — Daily Ground Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+:root{
+  --paper:#EDE7DA;
+  --paper-dark:#E1D9C6;
+  --ink:#1F2A24;
+  --ink-soft:#4A5650;
+  --brick:#A9552E;
+  --steel:#2B4C5C;
+  --gold:#C9A227;
+  --green:#4B7355;
+  --grey:#8A8378;
+  --flag:#B5433D;
+  --indigo:#5C5B8A;
+  --line:#CBC2AC;
+  --white:#FBF9F3;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.bg-grid{
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -1px -1px;
+  opacity:0.35;
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+}
+.wrap{
+  position:relative;
+  z-index:1;
+  max-width:720px;
+  margin:0 auto;
+  padding:18px 14px 60px;
+}
+header.top{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  border-bottom:2px solid var(--ink);
+  padding-bottom:10px;
+  margin-bottom:16px;
+}
+.brand{
+  font-family:'Fraunces',serif;
+  font-weight:700;
+  font-size:19px;
+  letter-spacing:0.2px;
+}
+.brand small{
+  display:block;
+  font-family:'IBM Plex Mono',monospace;
+  font-weight:500;
+  font-size:10px;
+  letter-spacing:1.5px;
+  color:var(--brick);
+  text-transform:uppercase;
+  margin-top:2px;
+}
+.tabs{
+  display:flex;
+  gap:0;
+  border:1.5px solid var(--ink);
+  border-radius:8px;
+  overflow:hidden;
+  margin-bottom:18px;
+}
+.tab-btn{
+  flex:1;
+  padding:11px 6px;
+  background:var(--white);
+  border:none;
+  font-family:'Inter',sans-serif;
+  font-weight:600;
+  font-size:13px;
+  color:var(--ink-soft);
+  cursor:pointer;
+  border-right:1.5px solid var(--ink);
+}
+.tab-btn:last-child{border-right:none;}
+.tab-btn.active{
+  background:var(--ink);
+  color:var(--paper);
+}
+.card{
+  background:var(--white);
+  border:1.5px solid var(--ink);
+  border-radius:10px;
+  padding:16px;
+  margin-bottom:14px;
+  box-shadow:3px 3px 0 rgba(31,42,36,0.08);
+}
+.card h2{
+  font-family:'Fraunces',serif;
+  font-size:16px;
+  font-weight:600;
+  margin:0 0 12px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--grey);
+  margin-bottom:4px;
+  display:block;
+}
+label{
+  display:block;
+  font-size:12px;
+  font-weight:600;
+  color:var(--ink-soft);
+  margin-bottom:5px;
+  margin-top:10px;
+}
+select, input[type=date], input[type=time], input[type=text]{
+  width:100%;
+  padding:10px 10px;
+  border:1.5px solid var(--line);
+  border-radius:7px;
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  background:var(--paper);
+  color:var(--ink);
+}
+select:focus, input:focus{outline:2px solid var(--steel); outline-offset:1px;}
+.row2{display:flex; gap:10px;}
+.row2 > div{flex:1;}
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
+.chip{
+  padding:8px 12px;
+  border-radius:20px;
+  border:1.5px solid var(--line);
+  background:var(--paper);
+  font-size:12.5px;
+  font-weight:600;
+  cursor:pointer;
+  color:var(--ink-soft);
+  font-family:'Inter',sans-serif;
+}
+.chip.sel{
+  border-color:var(--ink);
+  color:var(--white);
+}
+.add-btn{
+  width:100%;
+  margin-top:14px;
+  padding:12px;
+  background:var(--steel);
+  color:var(--white);
+  border:none;
+  border-radius:7px;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+  font-family:'Inter',sans-serif;
+}
+.save-btn{
+  width:100%;
+  margin-top:10px;
+  padding:13px;
+  background:var(--ink);
+  color:var(--paper);
+  border:none;
+  border-radius:7px;
+  font-weight:700;
+  font-size:14.5px;
+  cursor:pointer;
+  font-family:'Fraunces',serif;
+  letter-spacing:0.3px;
+}
+.save-btn:disabled{opacity:0.6; cursor:wait;}
+.block-list{margin-top:12px; display:flex; flex-direction:column; gap:6px;}
+.block-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:9px 10px;
+  border-radius:7px;
+  border-left:5px solid var(--steel);
+  background:var(--paper-dark);
+  font-size:12.5px;
+}
+.block-item .meta{color:var(--ink-soft); font-size:11px; font-family:'IBM Plex Mono',monospace;}
+.block-item button{
+  background:none; border:none; color:var(--flag); font-size:16px; cursor:pointer; padding:0 4px;
+}
+.total-line{
+  margin-top:10px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+  display:flex;
+  justify-content:space-between;
+  border-top:1px dashed var(--line);
+  padding-top:8px;
+}
+.nav-week{
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+}
+.nav-week button{
+  background:var(--ink); color:var(--paper); border:none; width:32px; height:32px; border-radius:6px; font-size:16px; cursor:pointer;
+}
+.nav-week .wk-label{
+  font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; text-align:center;
+}
+table.grid-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:11.5px;
+}
+table.grid-table th{
+  font-family:'IBM Plex Mono',monospace;
+  font-weight:600;
+  font-size:10px;
+  color:var(--grey);
+  padding:4px 2px;
+  text-transform:uppercase;
+}
+table.grid-table td{
+  padding:3px 2px;
+  vertical-align:middle;
+}
+.person-name{
+  font-weight:600;
+  font-size:12px;
+  white-space:nowrap;
+  padding-right:6px !important;
+}
+.person-name .tag{
+  display:block;
+  font-family:'IBM Plex Mono',monospace;
+  font-weight:500;
+  font-size:9px;
+  color:var(--grey);
+}
+.day-cell{
+  cursor:pointer;
+  width:38px;
+}
+.stack{
+  height:26px;
+  width:100%;
+  border-radius:4px;
+  border:1px solid var(--line);
+  display:flex;
+  overflow:hidden;
+  background:var(--paper);
+}
+.stack.empty{
+  background:repeating-linear-gradient(45deg, var(--paper-dark), var(--paper-dark) 3px, var(--paper) 3px, var(--paper) 6px);
+}
+.stack-hrs{
+  text-align:center;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:9px;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
+.legend{
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:10.5px;
+}
+.legend span{display:flex; align-items:center; gap:4px; color:var(--ink-soft);}
+.legend i{width:9px; height:9px; border-radius:2px; display:inline-block;}
+.insight-row{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:9px 0; border-bottom:1px solid var(--line); font-size:12.5px;
+}
+.insight-row:last-child{border-bottom:none;}
+.insight-name{font-weight:600;}
+.insight-val{font-family:'IBM Plex Mono',monospace; font-size:11.5px;}
+.pill{
+  padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; font-family:'IBM Plex Mono',monospace;
+}
+.pill.ok{background:#E4EBE1; color:var(--green);}
+.pill.warn{background:#F3E2DE; color:var(--flag);}
+.roster-list{display:flex; flex-direction:column; gap:6px; margin-top:10px;}
+.roster-item{
+  display:flex; align-items:center; gap:8px; padding:8px; border:1px solid var(--line); border-radius:7px;
+}
+.roster-item input[type=text]{flex:1; padding:7px 8px; font-size:13px;}
+.roster-item select{width:100px; padding:7px 6px; font-size:12px;}
+.roster-item button{background:none; border:none; color:var(--flag); font-size:17px; cursor:pointer;}
+.small-btn{
+  padding:9px; background:var(--paper); border:1.5px dashed var(--ink-soft); border-radius:7px; font-weight:600; font-size:12.5px; cursor:pointer; color:var(--ink-soft); width:100%; margin-top:8px;
+}
+.modal-bg{
+  position:fixed; inset:0; background:rgba(31,42,36,0.55); z-index:10;
+  display:flex; align-items:flex-end; justify-content:center;
+}
+.modal{
+  background:var(--white); width:100%; max-width:720px; border-radius:14px 14px 0 0;
+  padding:18px; max-height:75vh; overflow-y:auto; border-top:2px solid var(--ink);
+}
+.modal h3{font-family:'Fraunces',serif; margin:0 0 4px; font-size:16px;}
+.modal .sub{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--grey); margin-bottom:12px;}
+.close-modal{
+  width:100%; padding:10px; background:var(--ink); color:var(--paper); border:none; border-radius:7px; font-weight:600; margin-top:14px; cursor:pointer;
+}
+.empty-note{color:var(--grey); font-size:12.5px; text-align:center; padding:20px 0;}
+.hint{font-size:11.5px; color:var(--grey); margin-top:4px; line-height:1.5;}
+.status-msg{
+  text-align:center; font-size:12.5px; font-weight:600; padding:9px; border-radius:7px; margin-top:10px;
+}
+.status-msg.ok{background:#E4EBE1; color:var(--green);}
+.status-msg.err{background:#F3E2DE; color:var(--flag);}
+.status-msg.sync{background:var(--paper-dark); color:var(--ink-soft);}
+
+.filter-row{display:flex; gap:8px; margin-bottom:12px;}
+.filter-row > div{flex:1;}
+.chart-box{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 8px 4px;
+  margin-top:4px;
+}
+.kpi-strip{
+  display:flex; gap:8px; margin-bottom:14px;
+}
+.kpi{
+  flex:1;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 8px;
+  text-align:center;
+}
+.kpi .num{
+  font-family:'Fraunces',serif; font-weight:700; font-size:19px; color:var(--ink);
+}
+.kpi .lbl{
+  font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--grey); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;
+}
+.trend-arrow{font-weight:700;}
+.trend-up{color:var(--green);}
+.trend-down{color:var(--flag);}
+.trend-flat{color:var(--grey);}
+.pred-table{width:100%; border-collapse:collapse; font-size:12px; margin-top:8px;}
+.pred-table th{
+  text-align:left; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--grey); text-transform:uppercase; padding:5px 4px; border-bottom:1.5px solid var(--ink);
+}
+.pred-table td{padding:7px 4px; border-bottom:1px solid var(--line); vertical-align:middle;}
+.pred-table tr:last-child td{border-bottom:none;}
+.pred-name{font-weight:600;}
+.donut-wrap{display:flex; align-items:center; gap:14px; margin-top:6px;}
+.donut-wrap canvas{max-width:130px; max-height:130px;}
+
+.sticky-name{
+  position:sticky;
+  top:0;
+  z-index:5;
+  background:var(--ink);
+  color:var(--paper);
+  padding:8px 12px;
+  border-radius:8px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;
+  font-weight:600;
+  margin-bottom:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:0 3px 8px rgba(31,42,36,0.15);
+}
+.sticky-name .sn-label{color:var(--grey); font-weight:500; text-transform:uppercase; font-size:9.5px; letter-spacing:1px;}
+.sync-note{
+  font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--grey); text-align:center; margin-bottom:10px;
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">Mangalam Landmarks<small>Daily Ground Report</small></div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="log">My Day</button>
+    <button class="tab-btn" data-tab="team">Team View</button>
+    <button class="tab-btn" data-tab="dash">Dashboard</button>
+    <button class="tab-btn" data-tab="roster">Team List</button>
+  </div>
+
+  <div class="sync-note" id="syncNote"></div>
+
+  <!-- LOG TAB -->
+  <div id="tab-log">
+    <div class="sticky-name" id="stickyName">
+      <span class="sn-label">Logging as</span>
+      <span id="stickyNameValue">—</span>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Who's logging</span>
+      <select id="logPerson"></select>
+
+      <div class="row2">
+        <div>
+          <label>Date</label>
+          <input type="date" id="logDate">
+        </div>
+      </div>
+
+      <label>Add a block of time</label>
+      <div class="chips" id="catChips"></div>
+      <div class="row2" style="margin-top:8px;">
+        <div><label>From</label><input type="time" id="blkStart"></div>
+        <div><label>To</label><input type="time" id="blkEnd"></div>
+      </div>
+      <label>Where / what (site name, party, item)</label>
+      <input type="text" id="blkNote" placeholder="e.g. Starview site, Aikyam deed signing">
+      <button class="add-btn" id="addBlockBtn">+ Add Block</button>
+
+      <div class="block-list" id="blockList"></div>
+      <div class="total-line"><span>Total logged</span><span id="totalHrs">0h 0m</span></div>
+
+      <button class="save-btn" id="saveDayBtn">Save Today's Report</button>
+      <div id="saveStatus"></div>
+      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. Categories: Meeting / Approvals / Culture-Event / Site Visit / HO Meeting / Other.</div>
+    </div>
+  </div>
+
+  <!-- TEAM TAB -->
+  <div id="tab-team" style="display:none;">
+    <div class="card">
+      <div class="nav-week">
+        <button id="prevWeek">‹</button>
+        <div class="wk-label" id="weekLabel"></div>
+        <button id="nextWeek">›</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="grid-table" id="teamGrid"></table>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="card">
+      <h2>This Week — Flags</h2>
+      <div id="insights"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD TAB -->
+  <div id="tab-dash" style="display:none;">
+    <div class="card">
+      <h2>Predictive Efficiency Dashboard</h2>
+      <div class="filter-row">
+        <div>
+          <label style="margin-top:0;">View</label>
+          <select id="dashView"><option value="team">Whole Team (avg)</option></select>
+        </div>
+        <div>
+          <label style="margin-top:0;">History</label>
+          <select id="dashWeeks">
+            <option value="4">4 weeks</option>
+            <option value="6" selected>6 weeks</option>
+            <option value="8">8 weeks</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="kpi-strip" id="kpiStrip"></div>
+
+      <span class="eyebrow">Efficiency trend — actual + next-week projection</span>
+      <div class="chart-box"><canvas id="trendChart" height="180"></canvas></div>
+      <div class="hint">Efficiency % = (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting) ÷ total logged time, per week. "Other" is treated as non-productive time. Dashed segment is a projection based on the recent trend, not a guarantee.</div>
+    </div>
+
+    <div class="card">
+      <span class="eyebrow">Time split — most recent week</span>
+      <div class="donut-wrap">
+        <canvas id="donutChart" width="130" height="130"></canvas>
+        <div class="legend" id="donutLegend" style="flex-direction:column; align-items:flex-start;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Who to Watch — Next Week Forecast</h2>
+      <div class="hint" style="margin-top:0;">Sorted by declining trend first, so the people who most need a conversation surface at the top.</div>
+      <table class="pred-table" id="predTable"></table>
+    </div>
+  </div>
+
+  <!-- ROSTER TAB -->
+  <div id="tab-roster" style="display:none;">
+    <div class="card">
+      <h2>Reporting Team</h2>
+      <div class="hint">Everyone picks their own name from this list on the "My Day" tab. Mark Direct (reports to you) or Indirect.</div>
+      <div class="roster-list" id="rosterList"></div>
+      <button class="small-btn" id="addRosterBtn">+ Add Person</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+// ================= GOOGLE SHEETS BACKEND =================
+// Paste your Apps Script Web App URL here (Deploy → Web app → Anyone):
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+// All data lives in the Google Sheet. On load (and each time you open
+// Team View / Dashboard) the app pulls roster + all logs in ONE call,
+// caches them in logsIndex, and every view reads from that cache.
+
+let logsIndex = {}; // key `${personId}|${date}` -> blocks array
+
+function setSyncNote(msg){
+  document.getElementById('syncNote').textContent = msg || '';
+}
+
+async function apiGet(){
+  const res = await fetch(API_URL);
+  if(!res.ok) throw new Error('Network error ' + res.status);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'Server error');
+  return data;
+}
+
+async function apiPost(payload){
+  // text/plain body avoids the CORS preflight that Apps Script can't answer
+  const res = await fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok) throw new Error('Network error ' + res.status);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'Server error');
+  return data;
+}
+
+async function refreshData(){
+  setSyncNote('Syncing with Google Sheet…');
+  const data = await apiGet();
+  roster = data.roster || [];
+  logsIndex = {};
+  (data.logs || []).forEach(l=>{
+    logsIndex[l.personId + '|' + l.date] = l.blocks || [];
+  });
+  setSyncNote('');
+}
+// =========================================================
+
+const CATS = [
+  {k:'meeting', label:'Meeting', color: '#2B4C5C'},
+  {k:'approval', label:'Approvals', color: '#4B7355'},
+  {k:'culture', label:'Culture/Event', color: '#C9A227'},
+  {k:'site', label:'Site Visit', color: '#A9552E'},
+  {k:'ho', label:'HO Meeting', color: '#5C5B8A'},
+  {k:'other', label:'Other', color: '#8A8378'}
+];
+const catMap = Object.fromEntries(CATS.map(c=>[c.k,c]));
+
+const DEFAULT_ROSTER = [
+  {id:'p_shivam',  name:'Shivam Kashyap',  role:'VP — Sales & Marketing',          type:'Direct'},
+  {id:'p_mukund',  name:'Mukund Patel',    role:'VP — HR',                         type:'Direct'},
+  {id:'p_atul',    name:'Atul Ghatge',     role:'GM — Legal & Purchase',           type:'Direct'},
+  {id:'p_deepak',  name:'Deepak Shinde',   role:'GM — Accounts & Finance',         type:'Direct'},
+  {id:'p_upendra', name:'Upendra Gulve',   role:'GM — Engineering',                type:'Direct'},
+  {id:'p_amol',    name:'Amol Kalokhe',    role:'GM — CBD',                        type:'Indirect'},
+  {id:'p_nikhil',  name:'Nikhil',          role:'Engineering Coordination',        type:'Indirect'},
+  {id:'p_saurabh', name:'Saurabh Sakore',  role:'Manager — Legal & Liaisoning',    type:'Indirect'},
+  {id:'p_vijay',   name:'Vijay Bhalekar',  role:'AGM — Engineering',               type:'Indirect'},
+  {id:'p_dinesh',  name:'Dinesh Chavan',   role:'GM — Engineering',                type:'Indirect'}
+];
+
+let roster = [];
+let selectedCat = 'meeting';
+let blocks = [];
+let weekOffset = 0;
+
+function pad(n){return n.toString().padStart(2,'0');}
+function todayStr(){const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function fmtHM(mins){const h=Math.floor(mins/60), m=Math.round(mins%60); return `${h}h ${m}m`;}
+function timeToMin(t){if(!t)return 0; const [h,m]=t.split(':').map(Number); return h*60+m;}
+
+async function saveRoster(){
+  try{
+    await apiPost({action:'saveRoster', roster});
+  }catch(e){
+    setSyncNote('Roster save failed — check connection and retry.');
+  }
+}
+
+function renderRosterSelect(){
+  const sel = document.getElementById('logPerson');
+  sel.innerHTML = roster.length ? roster.map(p=>`<option value="${p.id}">${p.name} — ${p.role||p.type}</option>`).join('') : `<option value="">Add your name in Team List tab first</option>`;
+  updateStickyName();
+}
+
+function updateStickyName(){
+  const sel = document.getElementById('logPerson');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('stickyNameValue').textContent = opt ? opt.text : '—';
+}
+
+function renderRosterList(){
+  const box = document.getElementById('rosterList');
+  if(!roster.length){ box.innerHTML = `<div class="empty-note">No one added yet. Tap "+ Add Person" below.</div>`; return; }
+  box.innerHTML = roster.map((p,i)=>`
+    <div class="roster-item">
+      <div style="flex:1;">
+        <input type="text" value="${p.name}" data-i="${i}" class="rname" placeholder="Name" style="margin-bottom:5px;">
+        <input type="text" value="${p.role||''}" data-i="${i}" class="rrole" placeholder="Role / Department">
+      </div>
+      <select data-i="${i}" class="rtype">
+        <option value="Direct" ${p.type==='Direct'?'selected':''}>Direct</option>
+        <option value="Indirect" ${p.type==='Indirect'?'selected':''}>Indirect</option>
+      </select>
+      <button data-i="${i}" class="rdel">✕</button>
+    </div>
+  `).join('');
+  box.querySelectorAll('.rname').forEach(inp=>inp.addEventListener('change', e=>{
+    roster[e.target.dataset.i].name = e.target.value; saveRoster(); renderRosterSelect();
+  }));
+  box.querySelectorAll('.rrole').forEach(inp=>inp.addEventListener('change', e=>{
+    roster[e.target.dataset.i].role = e.target.value; saveRoster(); renderRosterSelect();
+  }));
+  box.querySelectorAll('.rtype').forEach(sel=>sel.addEventListener('change', e=>{
+    roster[e.target.dataset.i].type = e.target.value; saveRoster(); renderRosterSelect();
+  }));
+  box.querySelectorAll('.rdel').forEach(btn=>btn.addEventListener('click', e=>{
+    roster.splice(e.target.dataset.i,1); saveRoster(); renderRosterList(); renderRosterSelect();
+  }));
+}
+
+document.getElementById('addRosterBtn').addEventListener('click', ()=>{
+  roster.push({id:'p'+Date.now(), name:'', role:'', type:'Direct'});
+  saveRoster(); renderRosterList();
+});
+
+// ---- CHIPS ----
+function renderChips(){
+  const box = document.getElementById('catChips');
+  box.innerHTML = CATS.map(c=>`<button type="button" class="chip ${c.k===selectedCat?'sel':''}" data-k="${c.k}" style="${c.k===selectedCat?`background:${c.color};border-color:${c.color};`:''}">${c.label}</button>`).join('');
+  box.querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click', e=>{
+    selectedCat = e.currentTarget.dataset.k; renderChips();
+  }));
+}
+
+// ---- LOG TAB ----
+document.getElementById('logDate').value = todayStr();
+
+document.getElementById('addBlockBtn').addEventListener('click', ()=>{
+  const start = document.getElementById('blkStart').value;
+  const end = document.getElementById('blkEnd').value;
+  const note = document.getElementById('blkNote').value.trim();
+  if(!start || !end){ alert('Enter start and end time.'); return; }
+  const dur = timeToMin(end) - timeToMin(start);
+  if(dur <= 0){ alert('End time must be after start time.'); return; }
+  blocks.push({cat:selectedCat, start, end, note, dur});
+  document.getElementById('blkStart').value='';
+  document.getElementById('blkEnd').value='';
+  document.getElementById('blkNote').value='';
+  renderBlocks();
+});
+
+function renderBlocks(){
+  const box = document.getElementById('blockList');
+  box.innerHTML = blocks.map((b,i)=>{
+    const c = catMap[b.cat];
+    return `<div class="block-item" style="border-left-color:${c.color}">
+      <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${b.start}–${b.end} (${fmtHM(b.dur)})</div></div>
+      <button data-i="${i}">✕</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click', e=>{
+    blocks.splice(e.target.dataset.i,1); renderBlocks();
+  }));
+  const total = blocks.reduce((s,b)=>s+b.dur,0);
+  document.getElementById('totalHrs').textContent = fmtHM(total);
+}
+
+document.getElementById('saveDayBtn').addEventListener('click', async ()=>{
+  const personId = document.getElementById('logPerson').value;
+  const date = document.getElementById('logDate').value;
+  if(!personId){ alert('Select your name first (add it in Team List tab if missing).'); return; }
+  if(!blocks.length){ alert('Add at least one block before saving.'); return; }
+  const btn = document.getElementById('saveDayBtn');
+  const st = document.getElementById('saveStatus');
+  const person = roster.find(p=>p.id===personId);
+  btn.disabled = true;
+  st.innerHTML = `<div class="status-msg sync">Saving to Google Sheet…</div>`;
+  try{
+    await apiPost({action:'saveLog', personId, personName: person ? person.name : '', date, blocks});
+    logsIndex[personId + '|' + date] = blocks.slice();
+    st.innerHTML = `<div class="status-msg ok">Saved for ${date}. Thank you.</div>`;
+    setTimeout(()=>{st.innerHTML='';}, 3500);
+  }catch(e){
+    st.innerHTML = `<div class="status-msg err">Save failed — check internet and tap Save again. Your blocks are still here.</div>`;
+  }
+  btn.disabled = false;
+});
+
+function loadExistingLog(){
+  const personId = document.getElementById('logPerson').value;
+  const date = document.getElementById('logDate').value;
+  if(!personId) return;
+  blocks = (logsIndex[personId + '|' + date] || []).slice();
+  renderBlocks();
+}
+document.getElementById('logPerson').addEventListener('change', ()=>{ loadExistingLog(); updateStickyName(); });
+document.getElementById('logDate').addEventListener('change', loadExistingLog);
+
+// ---- TABS ----
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    ['log','team','dash','roster'].forEach(t=>document.getElementById('tab-'+t).style.display = (t===btn.dataset.tab)?'block':'none');
+    if(btn.dataset.tab==='team' || btn.dataset.tab==='dash'){
+      try{ await refreshData(); renderRosterSelect(); }
+      catch(e){ setSyncNote('Could not refresh from Google Sheet — showing last loaded data.'); }
+    }
+    if(btn.dataset.tab==='team') renderTeamGrid();
+    if(btn.dataset.tab==='dash') renderDashboard();
+  });
+});
+
+// ---- TEAM VIEW ----
+function getMonday(offset){
+  const d = new Date();
+  d.setDate(d.getDate() + offset*7);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day===0?-6:1);
+  const monday = new Date(d.setDate(diff));
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+function weekDates(offset){
+  const mon = getMonday(offset);
+  return [...Array(7)].map((_,i)=>{
+    const d = new Date(mon); d.setDate(mon.getDate()+i);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  });
+}
+const DAY_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+document.getElementById('prevWeek').addEventListener('click', ()=>{weekOffset--; renderTeamGrid();});
+document.getElementById('nextWeek').addEventListener('click', ()=>{weekOffset++; renderTeamGrid();});
+
+function renderTeamGrid(){
+  const dates = weekDates(weekOffset);
+  const mon = new Date(dates[0]), sun = new Date(dates[6]);
+  document.getElementById('weekLabel').textContent = `${mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${sun.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}`;
+
+  document.getElementById('legend').innerHTML = CATS.map(c=>`<span><i style="background:${c.color}"></i>${c.label}</span>`).join('');
+
+  if(!roster.length){
+    document.getElementById('teamGrid').innerHTML = `<tr><td class="empty-note">Add your team in the Team List tab first.</td></tr>`;
+    document.getElementById('insights').innerHTML = '';
+    return;
+  }
+
+  // read all logs for this week from the cached index (one Sheet call happened on tab open)
+  const dataByPerson = {};
+  for(const p of roster){
+    dataByPerson[p.id] = {};
+    for(const d of dates){
+      dataByPerson[p.id][d] = logsIndex[p.id + '|' + d] || null;
+    }
+  }
+
+  let html = '<tr><th style="text-align:left;">Name</th>' + DAY_LABELS.map(l=>`<th>${l}</th>`).join('') + '</tr>';
+  roster.forEach(p=>{
+    html += `<tr><td class="person-name">${p.name}<span class="tag">${p.role||p.type}</span></td>`;
+    dates.forEach(d=>{
+      const blks = dataByPerson[p.id][d];
+      if(!blks || !blks.length){
+        html += `<td class="day-cell" data-p="${p.id}" data-d="${d}"><div class="stack empty"></div></td>`;
+      } else {
+        const total = blks.reduce((s,b)=>s+b.dur,0);
+        const segs = blks.map(b=>`<div style="flex:${b.dur};background:${catMap[b.cat].color}"></div>`).join('');
+        html += `<td class="day-cell" data-p="${p.id}" data-d="${d}"><div class="stack">${segs}</div><div class="stack-hrs">${(total/60).toFixed(1)}h</div></td>`;
+      }
+    });
+    html += '</tr>';
+  });
+  document.getElementById('teamGrid').innerHTML = html;
+
+  document.querySelectorAll('.day-cell').forEach(td=>{
+    td.addEventListener('click', ()=>{
+      const pid = td.dataset.p, d = td.dataset.d;
+      const person = roster.find(x=>x.id===pid);
+      const blks = dataByPerson[pid][d];
+      showDetailModal(person, d, blks);
+    });
+  });
+
+  renderInsights(dataByPerson, dates);
+}
+
+function showDetailModal(person, date, blks){
+  const root = document.getElementById('modalRoot');
+  let body;
+  if(!blks || !blks.length){
+    body = `<div class="empty-note">No report submitted for this day.</div>`;
+  } else {
+    const total = blks.reduce((s,b)=>s+b.dur,0);
+    body = blks.map(b=>{
+      const c = catMap[b.cat];
+      return `<div class="block-item" style="border-left-color:${c.color}">
+        <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${b.start}–${b.end} (${fmtHM(b.dur)})</div></div>
+      </div>`;
+    }).join('') + `<div class="total-line"><span>Total</span><span>${fmtHM(total)}</span></div>`;
+  }
+  root.innerHTML = `<div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <h3>${person.name}</h3>
+      <div class="sub">${date}</div>
+      ${body}
+      <button class="close-modal" id="closeModal">Close</button>
+    </div>
+  </div>`;
+  document.getElementById('closeModal').addEventListener('click', ()=>root.innerHTML='');
+  document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') root.innerHTML=''; });
+}
+
+function renderInsights(dataByPerson, dates){
+  const box = document.getElementById('insights');
+  const rows = roster.map(p=>{
+    let submitted=0, siteMin=0, idleMin=0, totalMin=0;
+    dates.forEach(d=>{
+      const blks = dataByPerson[p.id][d];
+      if(blks && blks.length){
+        submitted++;
+        blks.forEach(b=>{
+          totalMin += b.dur;
+          if(b.cat==='site') siteMin += b.dur;
+          if(b.cat==='other') idleMin += b.dur;
+        });
+      }
+    });
+    return {name:p.name, submitted, siteMin, idleMin, totalMin};
+  });
+  if(!rows.length || rows.every(r=>r.submitted===0)){
+    box.innerHTML = `<div class="empty-note">No reports yet this week.</div>`;
+    return;
+  }
+  box.innerHTML = rows.map(r=>{
+    const flag = r.submitted < 5 || r.idleMin > 300;
+    return `<div class="insight-row">
+      <div class="insight-name">${r.name}</div>
+      <div class="insight-val">
+        ${r.submitted}/7 days · site ${(r.siteMin/60).toFixed(1)}h · other ${(r.idleMin/60).toFixed(1)}h
+        <span class="pill ${flag?'warn':'ok'}">${flag?'CHECK':'OK'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---- PREDICTIVE DASHBOARD ----
+let trendChartInst=null, donutChartInst=null;
+
+function populateDashView(){
+  const sel = document.getElementById('dashView');
+  const current = sel.value;
+  sel.innerHTML = `<option value="team">Whole Team (avg)</option>` +
+    roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  if([...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+function fetchPersonDateBlocks(personId, date){
+  return logsIndex[personId + '|' + date] || null;
+}
+
+// Aggregate one week's stats across a set of person ids
+function weekStats(personIds, dates){
+  let totalMin=0, idleMin=0, catMin={}; CATS.forEach(c=>catMin[c.k]=0);
+  let submittedCount=0;
+  personIds.forEach(pid=>dates.forEach(d=>{
+    const blks = fetchPersonDateBlocks(pid, d);
+    if(blks && blks.length){
+      submittedCount++;
+      blks.forEach(b=>{
+        totalMin += b.dur;
+        catMin[b.cat] = (catMin[b.cat]||0) + b.dur;
+      });
+    }
+  }));
+  idleMin = catMin['other']||0;
+  return {totalMin, idleMin, catMin, submittedCount, slots: personIds.length*dates.length};
+}
+
+function linRegress(points){
+  // points: [{x,y}], returns {slope, intercept}
+  const n = points.length;
+  if(n<2) return null;
+  const sx = points.reduce((s,p)=>s+p.x,0);
+  const sy = points.reduce((s,p)=>s+p.y,0);
+  const sxy = points.reduce((s,p)=>s+p.x*p.y,0);
+  const sxx = points.reduce((s,p)=>s+p.x*p.x,0);
+  const denom = (n*sxx - sx*sx);
+  if(denom===0) return null;
+  const slope = (n*sxy - sx*sy)/denom;
+  const intercept = (sy - slope*sx)/n;
+  return {slope, intercept};
+}
+
+function buildWeeklyHistory(personIds, weeksBack){
+  const history = [];
+  for(let i=weeksBack-1; i>=0; i--){
+    const offset = -i;
+    const dates = weekDates(offset);
+    const stats = weekStats(personIds, dates);
+    const eff = stats.totalMin>0 ? Math.round(((stats.totalMin - stats.idleMin)/stats.totalMin)*100) : null;
+    const mon = new Date(dates[0]);
+    history.push({label: mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'}), eff, stats, dates});
+  }
+  return history;
+}
+
+function trendLabel(slope){
+  if(slope===null) return {text:'Not enough data', cls:'trend-flat', arrow:'—'};
+  if(slope > 1.5) return {text:'Improving', cls:'trend-up', arrow:'▲'};
+  if(slope < -1.5) return {text:'Declining', cls:'trend-down', arrow:'▼'};
+  return {text:'Stable', cls:'trend-flat', arrow:'→'};
+}
+
+function renderDashboard(){
+  populateDashView();
+  const viewVal = document.getElementById('dashView').value;
+  const weeksBack = parseInt(document.getElementById('dashWeeks').value, 10);
+
+  if(!roster.length){
+    document.getElementById('kpiStrip').innerHTML = `<div class="empty-note">Add your team first in the Team List tab.</div>`;
+    document.getElementById('predTable').innerHTML='';
+    return;
+  }
+
+  const personIds = viewVal==='team' ? roster.map(p=>p.id) : [viewVal];
+  const history = buildWeeklyHistory(personIds, weeksBack);
+  const actualPts = history.map((h,i)=>({x:i, y:h.eff})).filter(p=>p.y!==null);
+  const reg = linRegress(actualPts);
+
+  // ---- KPI strip ----
+  const lastWithData = [...history].reverse().find(h=>h.eff!==null);
+  const kpiEff = lastWithData ? lastWithData.eff+'%' : '—';
+  const tr = reg ? trendLabel(reg.slope) : trendLabel(null);
+  const lastStats = lastWithData ? lastWithData.stats : null;
+  const submitRate = lastStats ? `${lastStats.submittedCount}/${lastStats.slots}` : '—';
+  document.getElementById('kpiStrip').innerHTML = `
+    <div class="kpi"><div class="num">${kpiEff}</div><div class="lbl">Latest Efficiency</div></div>
+    <div class="kpi"><div class="num trend-arrow ${tr.cls}">${tr.arrow}</div><div class="lbl">${tr.text}</div></div>
+    <div class="kpi"><div class="num">${submitRate}</div><div class="lbl">Days Reported</div></div>
+  `;
+
+  // ---- Trend chart (actual + 2-week projection) ----
+  const labels = history.map(h=>h.label);
+  let projLabels = [], projValues = [];
+  if(reg && actualPts.length>=2){
+    const lastX = actualPts[actualPts.length-1].x;
+    for(let k=1; k<=2; k++){
+      const x = lastX+k;
+      const y = Math.max(0, Math.min(100, Math.round(reg.slope*x + reg.intercept)));
+      const d = new Date(getMonday(x - (history.length-1)));
+      projLabels.push(d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}));
+      projValues.push(y);
+    }
+  }
+  const allLabels = [...labels, ...projLabels];
+  const actualData = [...history.map(h=>h.eff), ...projLabels.map(()=>null)];
+  const projData = [...history.map(()=>null)];
+  if(projValues.length){
+    projData[history.length-1] = history[history.length-1].eff;
+    projValues.forEach(v=>projData.push(v));
+  }
+
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if(trendChartInst) trendChartInst.destroy();
+  trendChartInst = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: allLabels,
+      datasets:[
+        {label:'Actual', data:actualData, borderColor:'#2B4C5C', backgroundColor:'#2B4C5C', tension:0.25, spanGaps:true, pointRadius:4},
+        {label:'Projected', data:projData, borderColor:'#A9552E', borderDash:[5,4], backgroundColor:'#A9552E', tension:0.25, spanGaps:true, pointRadius:4}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{font:{size:10}}}},
+      scales:{ y:{min:0, max:100, ticks:{font:{size:9}}}, x:{ticks:{font:{size:9}}} }
+    }
+  });
+
+  // ---- Donut for most recent week with data ----
+  const donutCtx = document.getElementById('donutChart').getContext('2d');
+  if(donutChartInst) donutChartInst.destroy();
+  const legendBox = document.getElementById('donutLegend');
+  if(lastStats && lastStats.totalMin>0){
+    const dCats = CATS.filter(c=>lastStats.catMin[c.k]>0);
+    donutChartInst = new Chart(donutCtx, {
+      type:'doughnut',
+      data:{ labels:dCats.map(c=>c.label), datasets:[{data:dCats.map(c=>lastStats.catMin[c.k]), backgroundColor:dCats.map(c=>c.color), borderWidth:1}] },
+      options:{ plugins:{legend:{display:false}}, cutout:'62%' }
+    });
+    legendBox.innerHTML = dCats.map(c=>`<span><i style="background:${c.color}"></i>${c.label} — ${(lastStats.catMin[c.k]/60).toFixed(1)}h</span>`).join('');
+  } else {
+    legendBox.innerHTML = `<div class="empty-note">No data yet for a recent week.</div>`;
+  }
+
+  // ---- Predictive "who to watch" table (always whole team) ----
+  const rows = [];
+  for(const p of roster){
+    const h = buildWeeklyHistory([p.id], weeksBack);
+    const pts = h.map((x,i)=>({x:i,y:x.eff})).filter(pt=>pt.y!==null);
+    const r = linRegress(pts);
+    const last = [...h].reverse().find(x=>x.eff!==null);
+    const t = trendLabel(r ? r.slope : null);
+    let predicted = '—';
+    if(r && pts.length>=2){
+      const nextX = pts[pts.length-1].x + 1;
+      predicted = Math.max(0, Math.min(100, Math.round(r.slope*nextX + r.intercept))) + '%';
+    }
+    rows.push({
+      name: p.name, slope: r ? r.slope : -999, curr: last ? last.eff+'%' : '—',
+      trend: t, predicted
+    });
+  }
+  rows.sort((a,b)=>a.slope-b.slope);
+  const tbl = document.getElementById('predTable');
+  tbl.innerHTML = `<tr><th>Name</th><th>Current</th><th>Trend</th><th>Next Wk</th></tr>` +
+    rows.map(r=>`<tr>
+      <td class="pred-name">${r.name}</td>
+      <td>${r.curr}</td>
+      <td class="${r.trend.cls}">${r.trend.arrow} ${r.trend.text}</td>
+      <td>${r.predicted}</td>
+    </tr>`).join('');
+}
+
+document.getElementById('dashView').addEventListener('change', renderDashboard);
+document.getElementById('dashWeeks').addEventListener('change', renderDashboard);
+
+// ---- INIT ----
+(async function init(){
+  renderChips();
+  try{
+    await refreshData();
+  }catch(e){
+    setSyncNote('Could not reach the Google Sheet backend. Check the API_URL at the top of the code and your internet connection.');
+  }
+  if(!roster.length){
+    roster = DEFAULT_ROSTER.slice();
+    await saveRoster();
+  }
+  renderRosterSelect();
+  renderRosterList();
+  loadExistingLog();
+})();
+</script>
+</body>
+</html>
