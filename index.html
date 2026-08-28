@@ -491,8 +491,9 @@ table.grid-table td{
         </div>
       </div>
 
-      <label>Add a block of time</label>
+      <label>Add a block of time — tap one or more categories</label>
       <div class="chips" id="catChips"></div>
+      <div class="hint" style="margin-top:6px;">Did more than one thing in the same slot? Tap several categories — the time is split equally between them.</div>
       <div class="row2" style="margin-top:8px;">
         <div><label>From</label><input type="time" id="blkStart"></div>
         <div><label>To</label><input type="time" id="blkEnd"></div>
@@ -716,7 +717,7 @@ function nonprodMin(catMin){
 }
 
 let roster = [];
-let selectedCat = 'meeting';
+let selectedCats = new Set(['meeting']); // multi-select: several categories can share one time slot
 let blocks = [];
 let weekOffset = 0;
 
@@ -725,6 +726,14 @@ function todayStr(){const d=new Date(); return `${d.getFullYear()}-${pad(d.getMo
 function fmtHM(mins){const h=Math.floor(mins/60), m=Math.round(mins%60); return `${h}h ${m}m`;}
 function fmtH(mins){return (mins/60).toFixed(1)+'h';}
 function timeToMin(t){if(!t)return 0; const [h,m]=t.split(':').map(Number); return h*60+m;}
+// "18:07" -> "6:07 PM" for display (storage stays 24h for correct math)
+function fmt12(t){
+  if(!t) return '';
+  const [h,m] = t.split(':').map(Number);
+  const ap = h>=12 ? 'PM' : 'AM';
+  const h12 = h%12 === 0 ? 12 : h%12;
+  return `${h12}:${pad(m)} ${ap}`;
+}
 
 // ================= LOGIN =================
 const AUTH_KEY = 'dgr_auth_v2';
@@ -891,9 +900,14 @@ document.getElementById('addRosterBtn').addEventListener('click', ()=>{
 // ================= CHIPS =================
 function renderChips(){
   const box = document.getElementById('catChips');
-  box.innerHTML = CATS.map(c=>`<button type="button" class="chip ${c.k===selectedCat?'sel':''}" data-k="${c.k}" style="${c.k===selectedCat?`background:${c.color};border-color:${c.color};`:''}">${c.label}</button>`).join('');
+  box.innerHTML = CATS.map(c=>{
+    const sel = selectedCats.has(c.k);
+    return `<button type="button" class="chip ${sel?'sel':''}" data-k="${c.k}" style="${sel?`background:${c.color};border-color:${c.color};`:''}">${c.label}</button>`;
+  }).join('');
   box.querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click', e=>{
-    selectedCat = e.currentTarget.dataset.k; renderChips();
+    const k = e.currentTarget.dataset.k;
+    if(selectedCats.has(k)) selectedCats.delete(k); else selectedCats.add(k);
+    renderChips();
   }));
 }
 
@@ -902,10 +916,20 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   const start = document.getElementById('blkStart').value;
   const end = document.getElementById('blkEnd').value;
   const note = document.getElementById('blkNote').value.trim();
+  const cats = CATS.filter(c=>selectedCats.has(c.k)).map(c=>c.k); // keep display order
+  if(!cats.length){ alert('Select at least one category.'); return; }
   if(!start || !end){ alert('Enter start and end time.'); return; }
   const dur = timeToMin(end) - timeToMin(start);
   if(dur <= 0){ alert('End time must be after start time.'); return; }
-  blocks.push({cat:selectedCat, start, end, note, dur});
+  // One category = one block. Several categories = same time slot, duration
+  // split equally between them so total hours stay honest (no double counting).
+  const per = Math.floor(dur / cats.length);
+  let remainder = dur - per*cats.length;
+  cats.forEach(k=>{
+    const d = per + (remainder>0 ? 1 : 0);
+    if(remainder>0) remainder--;
+    blocks.push({cat:k, start, end, note, dur:d, split: cats.length>1});
+  });
   document.getElementById('blkStart').value='';
   document.getElementById('blkEnd').value='';
   document.getElementById('blkNote').value='';
@@ -917,7 +941,7 @@ function renderBlocks(){
   box.innerHTML = blocks.map((b,i)=>{
     const c = catMap[b.cat];
     return `<div class="block-item" style="border-left-color:${c.color}">
-      <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${b.start}–${b.end} (${fmtHM(b.dur)})</div></div>
+      <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})</div></div>
       <button data-i="${i}">✕</button>
     </div>`;
   }).join('');
@@ -1096,7 +1120,7 @@ function showDetailModal(person, date, blks){
     body = blks.map(b=>{
       const c = catMap[b.cat];
       return `<div class="block-item" style="border-left-color:${c.color}">
-        <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${b.start}–${b.end} (${fmtHM(b.dur)})</div></div>
+        <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})</div></div>
       </div>`;
     }).join('') + `<div class="total-line"><span>Total</span><span>${fmtHM(total)}</span></div>`;
   }
