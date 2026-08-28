@@ -506,7 +506,7 @@ table.grid-table td{
 
       <button class="save-btn" id="saveDayBtn">Save Today's Report</button>
       <div id="saveStatus"></div>
-      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. Categories: Meeting / Approvals / Culture-Event / Site Visit / HO Meeting / Travel Time / Lunch / Tea Break / Other.</div>
+      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. Categories: Meeting / Approvals / Culture-Event / Site Visit / HO Meeting / Desk Work / Travel Time / Lunch / Tea Break / Other.</div>
     </div>
   </div>
 
@@ -517,7 +517,7 @@ table.grid-table td{
       <div class="kpi-strip" id="myKpis"></div>
       <span class="eyebrow">My efficiency — last 6 weeks + projection</span>
       <div class="chart-box"><canvas id="myTrendChart" height="180"></canvas></div>
-      <div class="hint">Efficiency % = productive time (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting + Travel) ÷ total logged time. Lunch, Tea Break and Other count as non-productive. Discipline % = days you submitted a report. Dashed segment is a projection from your recent trend.</div>
+      <div class="hint">Efficiency % = productive time (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting + Desk Work + Travel) ÷ total logged time. Lunch, Tea Break and Other count as non-productive. Discipline % = days you submitted a report. Dashed segment is a projection from your recent trend.</div>
     </div>
     <div class="card">
       <span class="eyebrow">My time split — this week</span>
@@ -571,7 +571,7 @@ table.grid-table td{
 
       <span class="eyebrow">Efficiency trend — actual + next-week projection</span>
       <div class="chart-box"><canvas id="trendChart" height="180"></canvas></div>
-      <div class="hint">Efficiency % = (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting + Travel) ÷ total logged time, per week. Lunch, Tea Break and "Other" are treated as non-productive time. Dashed segment is a projection based on the recent trend, not a guarantee.</div>
+      <div class="hint">Efficiency % = (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting + Desk Work + Travel) ÷ total logged time, per week. Lunch, Tea Break and "Other" are treated as non-productive time. Dashed segment is a projection based on the recent trend, not a guarantee.</div>
     </div>
 
     <div class="card">
@@ -699,6 +699,7 @@ const CATS = [
   {k:'culture', label:'Culture/Event', color: '#C9A227'},
   {k:'site', label:'Site Visit', color: '#A9552E'},
   {k:'ho', label:'HO Meeting', color: '#5C5B8A'},
+  {k:'desk', label:'Desk Work', color: '#6B7F3E'},
   {k:'travel', label:'Travel Time', color: '#3E7C7B'},
   {k:'lunch', label:'Lunch', color: '#8A6B3D'},
   {k:'tea', label:'Tea Break', color: '#B58A8A'},
