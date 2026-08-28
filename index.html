@@ -506,7 +506,7 @@ table.grid-table td{
 
       <button class="save-btn" id="saveDayBtn">Save Today's Report</button>
       <div id="saveStatus"></div>
-      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. Categories: Meeting / Approvals / Culture-Event / Site Visit / HO Meeting / Other.</div>
+      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. Categories: Meeting / Approvals / Culture-Event / Site Visit / HO Meeting / Travel Time / Lunch / Tea Break / Other.</div>
     </div>
   </div>
 
@@ -517,7 +517,7 @@ table.grid-table td{
       <div class="kpi-strip" id="myKpis"></div>
       <span class="eyebrow">My efficiency — last 6 weeks + projection</span>
       <div class="chart-box"><canvas id="myTrendChart" height="180"></canvas></div>
-      <div class="hint">Efficiency % = productive time (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting) ÷ total logged time. Discipline % = days you submitted a report. Dashed segment is a projection from your recent trend.</div>
+      <div class="hint">Efficiency % = productive time (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting + Travel) ÷ total logged time. Lunch, Tea Break and Other count as non-productive. Discipline % = days you submitted a report. Dashed segment is a projection from your recent trend.</div>
     </div>
     <div class="card">
       <span class="eyebrow">My time split — this week</span>
@@ -571,7 +571,7 @@ table.grid-table td{
 
       <span class="eyebrow">Efficiency trend — actual + next-week projection</span>
       <div class="chart-box"><canvas id="trendChart" height="180"></canvas></div>
-      <div class="hint">Efficiency % = (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting) ÷ total logged time, per week. "Other" is treated as non-productive time. Dashed segment is a projection based on the recent trend, not a guarantee.</div>
+      <div class="hint">Efficiency % = (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting + Travel) ÷ total logged time, per week. Lunch, Tea Break and "Other" are treated as non-productive time. Dashed segment is a projection based on the recent trend, not a guarantee.</div>
     </div>
 
     <div class="card">
@@ -699,9 +699,18 @@ const CATS = [
   {k:'culture', label:'Culture/Event', color: '#C9A227'},
   {k:'site', label:'Site Visit', color: '#A9552E'},
   {k:'ho', label:'HO Meeting', color: '#5C5B8A'},
+  {k:'travel', label:'Travel Time', color: '#3E7C7B'},
+  {k:'lunch', label:'Lunch', color: '#8A6B3D'},
+  {k:'tea', label:'Tea Break', color: '#B58A8A'},
   {k:'other', label:'Other', color: '#8A8378'}
 ];
 const catMap = Object.fromEntries(CATS.map(c=>[c.k,c]));
+// Non-productive time for efficiency math (Travel counts as productive —
+// site travel is part of the job in real estate)
+const NONPROD = new Set(['other','lunch','tea']);
+function nonprodMin(catMin){
+  let s=0; NONPROD.forEach(k=>{ s += catMin[k]||0; }); return s;
+}
 
 let roster = [];
 let selectedCat = 'meeting';
@@ -977,7 +986,7 @@ function weekStats(personIds, dates){
       });
     }
   }));
-  idleMin = catMin['other']||0;
+  idleMin = nonprodMin(catMin);
   return {totalMin, idleMin, catMin, submittedCount, slots: personIds.length*dates.length};
 }
 
@@ -1109,7 +1118,7 @@ function renderInsights(dataByPerson, dates){
         blks.forEach(b=>{
           totalMin += b.dur;
           if(b.cat==='site') siteMin += b.dur;
-          if(b.cat==='other') idleMin += b.dur;
+          if(NONPROD.has(b.cat)) idleMin += b.dur;
         });
       }
     });
@@ -1124,7 +1133,7 @@ function renderInsights(dataByPerson, dates){
     return `<div class="insight-row">
       <div class="insight-name">${r.name}</div>
       <div class="insight-val">
-        ${r.submitted}/7 days · site ${(r.siteMin/60).toFixed(1)}h · other ${(r.idleMin/60).toFixed(1)}h
+        ${r.submitted}/7 days · site ${(r.siteMin/60).toFixed(1)}h · breaks/other ${(r.idleMin/60).toFixed(1)}h
         <span class="pill ${flag?'warn':'ok'}">${flag?'CHECK':'OK'}</span>
       </div>
     </div>`;
@@ -1426,8 +1435,8 @@ function renderCEO(){
       return;
     }
     if(missed >= 2) flags.push({name:r.p.name, msg:`Missed ${missed} of ${elapsed} days — reporting discipline slipping.`});
-    const otherShare = r.s.totalMin>0 ? (r.s.catMin['other']||0)/r.s.totalMin : 0;
-    if(otherShare >= 0.25 && r.s.totalMin >= 240) flags.push({name:r.p.name, msg:`${Math.round(otherShare*100)}% of logged time is "Other" — worth asking where it's going.`});
+    const otherShare = r.s.totalMin>0 ? nonprodMin(r.s.catMin)/r.s.totalMin : 0;
+    if(otherShare >= 0.25 && r.s.totalMin >= 240) flags.push({name:r.p.name, msg:`${Math.round(otherShare*100)}% of logged time is breaks/Other — worth asking where it's going.`});
     const avgH = r.s.totalMin/60/r.s.submittedCount;
     if(avgH < 6 && r.s.submittedCount >= 2) flags.push({name:r.p.name, msg:`Averaging only ${avgH.toFixed(1)}h logged per reported day.`});
   });
