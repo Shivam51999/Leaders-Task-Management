@@ -933,10 +933,11 @@ document.getElementById('saveDayBtn').addEventListener('click', async ()=>{
   btn.disabled = true;
   st.innerHTML = `<div class="status-msg sync">Saving to Google Sheet…</div>`;
   try{
-    await apiPost({action:'saveLog', personId: auth.person.id, personName: auth.person.name, date, blocks});
+    const resp = await apiPost({action:'saveLog', personId: auth.person.id, personName: auth.person.name, date, blocks});
     logsIndex[auth.person.id + '|' + date] = blocks.slice();
-    st.innerHTML = `<div class="status-msg ok">Saved for ${date}. Thank you.</div>`;
-    setTimeout(()=>{st.innerHTML='';}, 3500);
+    const where = resp.row ? ` (${resp.mode==='updated'?'updated row':'row'} ${resp.row} in "${resp.sheet}")` : '';
+    st.innerHTML = `<div class="status-msg ok">Saved for ${date}${where}. Thank you.</div>`;
+    setTimeout(()=>{st.innerHTML='';}, 6000);
   }catch(e){
     st.innerHTML = `<div class="status-msg err">Save failed — check internet and tap Save again. Your blocks are still here.</div>`;
   }
