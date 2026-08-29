@@ -428,6 +428,16 @@ table.grid-table td{
 .login-err{color:var(--flag); font-size:12px; font-weight:600; margin-top:10px; min-height:16px;}
 .login-hint{font-size:11px; color:var(--grey); margin-top:14px; line-height:1.5;}
 
+/* ---- Meeting detail sub-form (shown when Meeting / HO Meeting selected) ---- */
+.meet-box{display:none;margin-top:10px;padding:12px;border:1px dashed #2B4C5C;border-radius:8px;background:rgba(43,76,92,.05);}
+.meet-box.show{display:block;}
+.meet-box .mb-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2B4C5C;margin-bottom:6px;}
+.outcome-row{padding:8px 0;border-bottom:1px solid var(--line,#eee);font-size:12.5px;line-height:1.5;}
+.outcome-row:last-child{border-bottom:none;}
+.outcome-row .om-head{font-weight:700;}
+.outcome-row .om-agenda{color:var(--grey,#777);}
+.outcome-row .om-out{margin-top:2px;}
+.outcome-row .om-out.missing{color:#B03A2E;font-weight:600;}
 /* ---- CEO time bars ---- */
 .tbar-row{margin-bottom:10px;}
 .tbar-head{
@@ -500,6 +510,20 @@ table.grid-table td{
       </div>
       <label>Where / what (site name, party, item)</label>
       <input type="text" id="blkNote" placeholder="e.g. Starview site, Aikyam deed signing">
+
+      <div class="meet-box" id="meetBox">
+        <div class="mb-title">Meeting details — required</div>
+        <label style="margin-top:0;">With whom</label>
+        <input type="text" id="blkWho" placeholder="e.g. RP + Prashant, or Aikyam landowner">
+        <label>Agenda — what was it for</label>
+        <input type="text" id="blkAgenda" placeholder="e.g. Momento token date slippage">
+        <label>Outcome — what was decided / next step</label>
+        <input type="text" id="blkOutcome" placeholder="e.g. Token confirmed 01 Jul, Shivaji to send CP list by Fri">
+        <div class="hint" style="margin-top:6px;">A meeting without an outcome is just time spent. If it's genuinely pending, write what the next step is and who owns it.</div>
+      </div>
+
+      <div class="meet-box" id="outBox"></div>
+
       <button class="add-btn" id="addBlockBtn">+ Add Block</button>
 
       <div class="block-list" id="blockList"></div>
@@ -507,7 +531,7 @@ table.grid-table td{
 
       <button class="save-btn" id="saveDayBtn">Save Today's Report</button>
       <div id="saveStatus"></div>
-      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. Categories: Meeting / Approvals / Culture-Event / Site Visit / HO Meeting / Desk Work / Travel Time / Lunch / Tea Break / Other.</div>
+      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. For every Meeting / HO Meeting block, with-whom, agenda and outcome are required — the CEO view reads these, so write them the way you'd report them in person.</div>
     </div>
   </div>
 
@@ -598,6 +622,16 @@ table.grid-table td{
       <span class="eyebrow">Where the time is going (vs last week)</span>
       <div id="ceoBars" style="margin-top:8px;"></div>
       <div class="hint">Delta compares this week's share of each category against last week. ▲ share growing, ▼ share shrinking.</div>
+    </div>
+
+    <div class="card">
+      <h2>Outcome Intelligence — This Week</h2>
+      <div class="kpi-strip" id="ceoMeetKpis"></div>
+      <span class="eyebrow">Who leadership is meeting (by hours)</span>
+      <div id="ceoMeetWho" style="margin-top:8px;"></div>
+      <span class="eyebrow" style="display:block;margin-top:14px;">What leadership time produced</span>
+      <div id="ceoOutcomes"></div>
+      <div class="hint">Every block except Lunch, Tea and Travel asks for an outcome. Entries showing "no outcome" are older logs or discipline gaps — both worth a question. Read the outcomes like a daily report: decisions, instructions, deliverables.</div>
     </div>
 
     <div class="card">
@@ -715,6 +749,19 @@ const NONPROD = new Set(['other','lunch','tea']);
 function nonprodMin(catMin){
   let s=0; NONPROD.forEach(k=>{ s += catMin[k]||0; }); return s;
 }
+
+// Every category except breaks & travel must state an outcome.
+// Meetings/HO Meetings use the richer who+agenda+outcome box; these five get
+// one required field each, with a prompt tuned to what "outcome" means there.
+const OUTCOME_CATS = {
+  approval: {q:'Approvals — what did you clear / reject / send back?', ph:'e.g. 7 CP invoices approved; Momento brochure sent back for price correction'},
+  site:     {q:'Site Visit — what did you find & what did you instruct?', ph:'e.g. Tower B slab 4 days behind — told PM to add night shift, review Fri'},
+  culture:  {q:'Culture/Event — what did it produce?', ph:'e.g. Skyview possession event, 40 families — 3 referral leads collected'},
+  desk:     {q:'Desk Work — what got completed or moved forward?', ph:'e.g. FY27 CP incentive grid finalised and mailed to RP'},
+  other:    {q:'Other — what was it & what came of it?', ph:'e.g. Bank RM visit for Myra account — document list received'}
+};
+// All categories where an outcome is expected (for CEO accountability math)
+const ACC_CATS = new Set(['meeting','ho','approval','site','culture','desk','other']);
 
 let roster = [];
 let selectedCats = new Set(['meeting']); // multi-select: several categories can share one time slot
@@ -909,6 +956,27 @@ function renderChips(){
     if(selectedCats.has(k)) selectedCats.delete(k); else selectedCats.add(k);
     renderChips();
   }));
+  // Meeting / HO Meeting selected -> show the with-whom / agenda / outcome fields
+  document.getElementById('meetBox').classList.toggle('show',
+    selectedCats.has('meeting') || selectedCats.has('ho'));
+  renderOutcomeInputs();
+}
+
+// One required outcome field per selected category (except meetings/breaks/travel).
+// Re-rendering must not wipe what the manager has already typed.
+function renderOutcomeInputs(){
+  const box = document.getElementById('outBox');
+  const prev = {};
+  box.querySelectorAll('input').forEach(inp=>{ prev[inp.dataset.k] = inp.value; });
+  const keys = Object.keys(OUTCOME_CATS).filter(k=>selectedCats.has(k));
+  box.innerHTML = keys.length
+    ? `<div class="mb-title">Outcome — required</div>` + keys.map(k=>`
+        <label style="margin-top:${keys.indexOf(k)===0?'0':''};">${OUTCOME_CATS[k].q}</label>
+        <input type="text" data-k="${k}" id="outc_${k}" placeholder="${OUTCOME_CATS[k].ph}">
+      `).join('')
+    : '';
+  keys.forEach(k=>{ if(prev[k]) document.getElementById('outc_'+k).value = prev[k]; });
+  box.classList.toggle('show', keys.length>0);
 }
 
 // ================= LOG TAB (managers) =================
@@ -921,6 +989,25 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   if(!start || !end){ alert('Enter start and end time.'); return; }
   const dur = timeToMin(end) - timeToMin(start);
   if(dur <= 0){ alert('End time must be after start time.'); return; }
+  // Meetings must carry accountability: with whom, agenda, outcome
+  const isMeeting = cats.includes('meeting') || cats.includes('ho');
+  const who = document.getElementById('blkWho').value.trim();
+  const agenda = document.getElementById('blkAgenda').value.trim();
+  const outcome = document.getElementById('blkOutcome').value.trim();
+  if(isMeeting){
+    if(!who){ alert('Meeting block: fill "With whom".'); return; }
+    if(!agenda){ alert('Meeting block: fill the agenda.'); return; }
+    if(!outcome){ alert('Meeting block: write the outcome — or the pending next step and who owns it.'); return; }
+  }
+  // Every other accountable category needs its own outcome line
+  const catOutcomes = {};
+  for(const k of Object.keys(OUTCOME_CATS)){
+    if(cats.includes(k)){
+      const v = document.getElementById('outc_'+k).value.trim();
+      if(!v){ alert(`${catMap[k].label}: write the outcome — what did this time produce?`); return; }
+      catOutcomes[k] = v;
+    }
+  }
   // One category = one block. Several categories = same time slot, duration
   // split equally between them so total hours stay honest (no double counting).
   const per = Math.floor(dur / cats.length);
@@ -928,11 +1015,18 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   cats.forEach(k=>{
     const d = per + (remainder>0 ? 1 : 0);
     if(remainder>0) remainder--;
-    blocks.push({cat:k, start, end, note, dur:d, split: cats.length>1});
+    const b = {cat:k, start, end, note, dur:d, split: cats.length>1};
+    if(k==='meeting' || k==='ho'){ b.who=who; b.agenda=agenda; b.outcome=outcome; }
+    if(catOutcomes[k]) b.outcome = catOutcomes[k];
+    blocks.push(b);
   });
   document.getElementById('blkStart').value='';
   document.getElementById('blkEnd').value='';
   document.getElementById('blkNote').value='';
+  document.getElementById('blkWho').value='';
+  document.getElementById('blkAgenda').value='';
+  document.getElementById('blkOutcome').value='';
+  document.querySelectorAll('#outBox input').forEach(inp=>inp.value='');
   renderBlocks();
 });
 
@@ -940,8 +1034,11 @@ function renderBlocks(){
   const box = document.getElementById('blockList');
   box.innerHTML = blocks.map((b,i)=>{
     const c = catMap[b.cat];
+    const meetLine = (b.who||b.agenda)
+      ? `<div class="meta">👥 ${b.who||'—'} · ${b.agenda||'—'}<br>→ ${b.outcome||'—'}</div>`
+      : (b.outcome ? `<div class="meta">→ ${b.outcome}</div>` : '');
     return `<div class="block-item" style="border-left-color:${c.color}">
-      <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})</div></div>
+      <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})</div>${meetLine}</div>
       <button data-i="${i}">✕</button>
     </div>`;
   }).join('');
@@ -1375,6 +1472,9 @@ function renderCEO(){
   if(!roster.length){
     document.getElementById('ceoKpis').innerHTML = `<div class="empty-note">Add your team first in the Team List tab.</div>`;
     document.getElementById('ceoBars').innerHTML='';
+    document.getElementById('ceoMeetKpis').innerHTML='';
+    document.getElementById('ceoMeetWho').innerHTML='';
+    document.getElementById('ceoOutcomes').innerHTML='';
     document.getElementById('ceoLedger').innerHTML='';
     document.getElementById('ceoFlags').innerHTML='';
     return;
@@ -1435,6 +1535,63 @@ function renderCEO(){
       `).join('');
   }
 
+  // ---- Outcome Intelligence ----
+  // Collect every accountable block this week (all categories except breaks & travel)
+  const accBlocks = [];
+  roster.forEach(p=>thisWkDates.forEach(d=>{
+    (getBlocks(p.id, d)||[]).forEach(b=>{
+      if(ACC_CATS.has(b.cat)) accBlocks.push({p, date:d, b});
+    });
+  }));
+  const meetBlocks = accBlocks.filter(x=>x.b.cat==='meeting' || x.b.cat==='ho');
+  const hasOutcome = x => !!(x.b.outcome && x.b.outcome.trim());
+  const mCount = meetBlocks.length;
+  const mMin = meetBlocks.reduce((s,x)=>s+x.b.dur,0);
+  const avgLen = mCount>0 ? Math.round(mMin/mCount) : null;
+  const accWithOutcome = accBlocks.filter(hasOutcome).length;
+  const accOutcomePct = accBlocks.length>0 ? Math.round(accWithOutcome/accBlocks.length*100) : null;
+  document.getElementById('ceoMeetKpis').innerHTML = accBlocks.length>0 ? `
+    <div class="kpi"><div class="num">${accOutcomePct}%</div><div class="lbl">Outcome Recorded (all work)</div></div>
+    <div class="kpi"><div class="num">${mCount}</div><div class="lbl">Meetings</div></div>
+    <div class="kpi"><div class="num">${fmtH(mMin)}</div><div class="lbl">Meeting Hours</div></div>
+    <div class="kpi"><div class="num">${avgLen!==null?avgLen+'m':'—'}</div><div class="lbl">Avg Meeting Length</div></div>
+  ` : `<div class="empty-note">No work logged this week yet.</div>`;
+
+  // Who leadership is meeting — group by the "with whom" text
+  const whoMap = {};
+  meetBlocks.forEach(x=>{
+    const key = (x.b.who && x.b.who.trim()) ? x.b.who.trim() : '(not recorded)';
+    whoMap[key] = (whoMap[key]||0) + x.b.dur;
+  });
+  const whoRows = Object.entries(whoMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const whoMax = whoRows.length ? whoRows[0][1] : 1;
+  document.getElementById('ceoMeetWho').innerHTML = whoRows.length
+    ? whoRows.map(([who,min])=>`
+        <div class="tbar-row">
+          <div class="tbar-head"><span class="tb-name">${who}</span><span class="tb-val">${fmtH(min)}</span></div>
+          <div class="tbar-track"><div class="tbar-fill" style="width:${(min/whoMax*100).toFixed(1)}%;background:${who==='(not recorded)'?'#B03A2E':'#2B4C5C'};"></div></div>
+        </div>`).join('')
+    : `<div class="empty-note">Nothing to show yet.</div>`;
+
+  // Outcomes feed — all accountable work, missing outcomes surfaced on top
+  const feed = accBlocks.slice().sort((a,b)=>{
+    const am = hasOutcome(a) ? 1 : 0;
+    const bm = hasOutcome(b) ? 1 : 0;
+    if(am!==bm) return am-bm;                 // missing outcomes first
+    return b.date.localeCompare(a.date);      // then newest
+  }).slice(0,12);
+  document.getElementById('ceoOutcomes').innerHTML = feed.length
+    ? feed.map(x=>{
+        const hasOut = hasOutcome(x);
+        const dd = new Date(x.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+        return `<div class="outcome-row">
+          <div class="om-head">${x.p.name} · ${dd} · ${catMap[x.b.cat].label} (${fmtHM(x.b.dur)})${x.b.who?` — with ${x.b.who}`:''}${(!x.b.who && x.b.note)?` — ${x.b.note}`:''}</div>
+          ${x.b.agenda?`<div class="om-agenda">Agenda: ${x.b.agenda}</div>`:''}
+          <div class="om-out ${hasOut?'':'missing'}">${hasOut?'→ '+x.b.outcome:'→ No outcome recorded'}</div>
+        </div>`;
+      }).join('')
+    : `<div class="empty-note">No work logged this week yet.</div>`;
+
   // ---- Leadership Time Ledger ----
   const ledgerRows = roster.map(p=>{
     const s = weekStats([p.id], thisWkDates);
@@ -1442,16 +1599,19 @@ function renderCEO(){
     let topCat = '—';
     let topMin = 0;
     CATS.forEach(c=>{ if((s.catMin[c.k]||0) > topMin){ topMin = s.catMin[c.k]; topCat = c.label; } });
-    return {p, s, eff, topCat, topMin};
+    const myAcc = accBlocks.filter(x=>x.p.id===p.id);
+    const outPct = myAcc.length>0 ? Math.round(myAcc.filter(hasOutcome).length/myAcc.length*100) : null;
+    return {p, s, eff, topCat, topMin, outPct};
   }).sort((a,b)=>b.s.totalMin - a.s.totalMin);
 
   document.getElementById('ceoLedger').innerHTML =
-    `<tr><th>Name</th><th>Hours</th><th>Days</th><th>Eff</th><th>Top Use</th></tr>` +
+    `<tr><th>Name</th><th>Hours</th><th>Days</th><th>Eff</th><th>Outcomes</th><th>Top Use</th></tr>` +
     ledgerRows.map(r=>`<tr>
       <td class="pred-name">${r.p.name}<span class="tag" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--grey);font-weight:500;">${r.p.role||r.p.type}</span></td>
       <td>${r.s.totalMin>0?fmtH(r.s.totalMin):'—'}</td>
       <td>${r.s.submittedCount}/${elapsed}</td>
       <td>${r.eff!==null?r.eff+'%':'—'}</td>
+      <td>${r.outPct!==null?r.outPct+'%':'—'}</td>
       <td>${r.topMin>0?`${r.topCat} (${fmtH(r.topMin)})`:'—'}</td>
     </tr>`).join('');
 
@@ -1468,6 +1628,18 @@ function renderCEO(){
     if(otherShare >= 0.25 && r.s.totalMin >= 240) flags.push({name:r.p.name, msg:`${Math.round(otherShare*100)}% of logged time is breaks/Other — worth asking where it's going.`});
     const avgH = r.s.totalMin/60/r.s.submittedCount;
     if(avgH < 6 && r.s.submittedCount >= 2) flags.push({name:r.p.name, msg:`Averaging only ${avgH.toFixed(1)}h logged per reported day.`});
+    // Meeting overload: over 40% of a full-ish week sitting in meetings
+    const pMeetMin = (r.s.catMin['meeting']||0) + (r.s.catMin['ho']||0);
+    if(r.s.totalMin >= 240 && pMeetMin/r.s.totalMin > 0.40)
+      flags.push({name:r.p.name, msg:`${Math.round(pMeetMin/r.s.totalMin*100)}% of the week in meetings — is delegation possible?`});
+  });
+  // Logged work with no outcome recorded — accountability gap, per person
+  const noOutBy = {};
+  accBlocks.forEach(x=>{
+    if(!hasOutcome(x)) noOutBy[x.p.name] = (noOutBy[x.p.name]||0)+1;
+  });
+  Object.entries(noOutBy).forEach(([name,n])=>{
+    flags.push({name, msg:`${n} logged block${n>1?'s':''} this week with no outcome recorded — what did the time produce?`});
   });
   document.getElementById('ceoFlags').innerHTML = flags.length
     ? flags.map(f=>`<div class="insight-row"><div class="insight-name">${f.name}</div><div class="insight-val" style="text-align:right;">${f.msg}</div></div>`).join('')
