@@ -428,6 +428,19 @@ table.grid-table td{
 .login-err{color:var(--flag); font-size:12px; font-weight:600; margin-top:10px; min-height:16px;}
 .login-hint{font-size:11px; color:var(--grey); margin-top:14px; line-height:1.5;}
 
+/* ---- Week planner ---- */
+.plan-item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--line,#eee);}
+.plan-item:last-child{border-bottom:none;}
+.plan-item .pi-text{font-size:13px;line-height:1.45;}
+.plan-item .pi-cat{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--grey,#888);}
+.plan-item .pi-result{font-size:12px;color:var(--ink-soft,#555);margin-top:2px;}
+.plan-item .pi-btns{display:flex;gap:4px;flex-shrink:0;}
+.pi-btn{font-size:11px;padding:3px 8px;border:1px solid var(--line,#ccc);background:transparent;border-radius:5px;cursor:pointer;}
+.pi-btn.on-done{background:#E4EBE1;border-color:#4B7355;color:#4B7355;font-weight:700;}
+.pi-btn.on-moved{background:#F5EEDC;border-color:#C9A227;color:#8B6B1A;font-weight:700;}
+.pi-btn.on-dropped{background:#F3E2DE;border-color:#B03A2E;color:#B03A2E;font-weight:700;}
+.plan-item.st-done .pi-text{}
+.plan-item.st-dropped .pi-text{text-decoration:line-through;opacity:.6;}
 /* ---- Meeting detail sub-form (shown when Meeting / HO Meeting selected) ---- */
 .meet-box{display:none;margin-top:10px;padding:12px;border:1px dashed #2B4C5C;border-radius:8px;background:rgba(43,76,92,.05);}
 .meet-box.show{display:block;}
@@ -512,14 +525,14 @@ table.grid-table td{
       <input type="text" id="blkNote" placeholder="e.g. Starview site, Aikyam deed signing">
 
       <div class="meet-box" id="meetBox">
-        <div class="mb-title">Meeting details — required</div>
+        <div class="mb-title">Meeting / Call details — required</div>
         <label style="margin-top:0;">With whom</label>
         <input type="text" id="blkWho" placeholder="e.g. RP + Prashant, or Aikyam landowner">
-        <label>Agenda — what was it for</label>
+        <label>Agenda / purpose — what was it for</label>
         <input type="text" id="blkAgenda" placeholder="e.g. Momento token date slippage">
         <label>Outcome — what was decided / next step</label>
         <input type="text" id="blkOutcome" placeholder="e.g. Token confirmed 01 Jul, Shivaji to send CP list by Fri">
-        <div class="hint" style="margin-top:6px;">A meeting without an outcome is just time spent. If it's genuinely pending, write what the next step is and who owns it.</div>
+        <div class="hint" style="margin-top:6px;">A meeting or call without an outcome is just time spent. If it's genuinely pending, write what the next step is and who owns it.</div>
       </div>
 
       <div class="meet-box" id="outBox"></div>
@@ -531,7 +544,28 @@ table.grid-table td{
 
       <button class="save-btn" id="saveDayBtn">Save Today's Report</button>
       <div id="saveStatus"></div>
-      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. For every Meeting / HO Meeting block, with-whom, agenda and outcome are required — the CEO view reads these, so write them the way you'd report them in person.</div>
+      <div class="hint">Add each block as it happens or all at once at day-end. Takes under 10 minutes. For every Meeting / Phone Call block, with-whom, agenda/purpose and outcome are required — the CEO view reads these, so write them the way you'd report them in person.</div>
+    </div>
+  </div>
+
+  <!-- MY WEEK TAB (managers) — plan vs achieved -->
+  <div id="tab-plan" style="display:none;">
+    <div class="card">
+      <div class="nav-week">
+        <button id="planPrevWeek">‹</button>
+        <div class="wk-label" id="planWeekLabel"></div>
+        <button id="planNextWeek">›</button>
+      </div>
+      <h2>My Week Plan</h2>
+      <div class="hint" style="margin-top:0;">List the 3–7 things that must get done this week. Mark each Done (with the result), Moved or Dropped as the week goes. The CEO view compares planned vs achieved.</div>
+      <div id="planList"></div>
+      <label>Add a planned item</label>
+      <input type="text" id="planText" placeholder="e.g. Close Momento CP incentive grid">
+      <label>Category</label>
+      <select id="planCat"></select>
+      <button class="add-btn" id="addPlanBtn">+ Add to Plan</button>
+      <button class="save-btn" id="savePlanBtn">Save Week Plan</button>
+      <div id="planStatus"></div>
     </div>
   </div>
 
@@ -542,7 +576,7 @@ table.grid-table td{
       <div class="kpi-strip" id="myKpis"></div>
       <span class="eyebrow">My efficiency — last 6 weeks + projection</span>
       <div class="chart-box"><canvas id="myTrendChart" height="180"></canvas></div>
-      <div class="hint">Efficiency % = productive time (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting + Desk Work + Travel) ÷ total logged time. Lunch, Tea Break and Other count as non-productive. Discipline % = days you submitted a report. Dashed segment is a projection from your recent trend.</div>
+      <div class="hint">Efficiency % = productive time (Meeting + Phone Call + Approvals + Culture/Event + Site Visit + Desk Work + Travel) ÷ total logged time. Lunch and Other count as non-productive. Discipline % = days you submitted a report. Dashed segment is a projection from your recent trend.</div>
     </div>
     <div class="card">
       <span class="eyebrow">My time split — this week</span>
@@ -596,7 +630,7 @@ table.grid-table td{
 
       <span class="eyebrow">Efficiency trend — actual + next-week projection</span>
       <div class="chart-box"><canvas id="trendChart" height="180"></canvas></div>
-      <div class="hint">Efficiency % = (Meeting + Approvals + Culture/Event + Site Visit + HO Meeting + Desk Work + Travel) ÷ total logged time, per week. Lunch, Tea Break and "Other" are treated as non-productive time. Dashed segment is a projection based on the recent trend, not a guarantee.</div>
+      <div class="hint">Efficiency % = (Meeting + Phone Call + Approvals + Culture/Event + Site Visit + Desk Work + Travel) ÷ total logged time, per week. Lunch and "Other" are treated as non-productive time. Dashed segment is a projection based on the recent trend, not a guarantee.</div>
     </div>
 
     <div class="card">
@@ -630,6 +664,16 @@ table.grid-table td{
       <span class="eyebrow">Who leadership is meeting (by hours)</span>
       <div id="ceoMeetWho" style="margin-top:8px;"></div>
       <span class="eyebrow" style="display:block;margin-top:14px;">What leadership time produced</span>
+      <div class="row2" style="margin:8px 0 4px;">
+        <div>
+          <label style="margin-top:0;">Manager</label>
+          <select id="ceoFilterPerson" onchange="renderCEO()"><option value="all">All managers</option></select>
+        </div>
+        <div>
+          <label style="margin-top:0;">Activity</label>
+          <select id="ceoFilterCat" onchange="renderCEO()"><option value="all">All activities</option></select>
+        </div>
+      </div>
       <div id="ceoOutcomes"></div>
       <div class="hint">Every block except Lunch, Tea and Travel asks for an outcome. Entries showing "no outcome" are older logs or discipline gaps — both worth a question. Read the outcomes like a daily report: decisions, instructions, deliverables.</div>
     </div>
@@ -638,6 +682,15 @@ table.grid-table td{
       <h2>Leadership Time Ledger</h2>
       <div class="hint" style="margin-top:0;">This week, sorted by hours logged. "Top use" is where each person spent the most time.</div>
       <table class="pred-table" id="ceoLedger"></table>
+    </div>
+
+    <div class="card">
+      <h2>Plan vs Achieved — This Week</h2>
+      <table class="pred-table" id="ceoPlanTable"></table>
+      <label style="margin-top:10px;">See one manager's plan items</label>
+      <select id="ceoPlanPerson" onchange="renderCEO()"><option value="">— Select manager —</option></select>
+      <div id="ceoPlanItems"></div>
+      <div class="hint">Done % = items marked Done ÷ items planned. "No plan" late in the week means the person is running on incoming work, not priorities — worth a conversation either way.</div>
     </div>
 
     <div class="card">
@@ -670,6 +723,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzfInhfIbpP1NsL6pM16C7U
 
 let auth = null;          // {loginId, pin, role:'ceo'|'manager', person:{id,name,role,type}|null}
 let logsIndex = {};       // `${personId}|${date}` -> blocks array
+let plansIndex = {};      // `${personId}|${weekStart}` -> plan items array
 
 function setSyncNote(msg){
   document.getElementById('syncNote').textContent = msg || '';
@@ -720,6 +774,10 @@ function ingest(data){
   (data.logs || []).forEach(l=>{
     logsIndex[l.personId + '|' + l.date] = l.blocks || [];
   });
+  plansIndex = {};
+  (data.plans || []).forEach(pl=>{
+    plansIndex[pl.personId + '|' + pl.weekStart] = pl.items || [];
+  });
 }
 
 async function refreshData(){
@@ -735,11 +793,12 @@ const CATS = [
   {k:'approval', label:'Approvals', color: '#4B7355'},
   {k:'culture', label:'Culture/Event', color: '#C9A227'},
   {k:'site', label:'Site Visit', color: '#A9552E'},
-  {k:'ho', label:'HO Meeting', color: '#5C5B8A'},
+  {k:'ho', label:'HO Meeting', color: '#5C5B8A', hidden:true},   // legacy: kept so old logs still render
+  {k:'call', label:'Phone Call', color: '#7A4E7E'},
   {k:'desk', label:'Desk Work', color: '#6B7F3E'},
   {k:'travel', label:'Travel Time', color: '#3E7C7B'},
   {k:'lunch', label:'Lunch', color: '#8A6B3D'},
-  {k:'tea', label:'Tea Break', color: '#B58A8A'},
+  {k:'tea', label:'Tea Break', color: '#B58A8A', hidden:true},   // legacy: kept so old logs still render
   {k:'other', label:'Other', color: '#8A8378'}
 ];
 const catMap = Object.fromEntries(CATS.map(c=>[c.k,c]));
@@ -760,8 +819,9 @@ const OUTCOME_CATS = {
   desk:     {q:'Desk Work — what got completed or moved forward?', ph:'e.g. FY27 CP incentive grid finalised and mailed to RP'},
   other:    {q:'Other — what was it & what came of it?', ph:'e.g. Bank RM visit for Myra account — document list received'}
 };
-// All categories where an outcome is expected (for CEO accountability math)
-const ACC_CATS = new Set(['meeting','ho','approval','site','culture','desk','other']);
+// All categories where an outcome is expected (for CEO accountability math).
+// 'ho' stays for legacy data already saved in the Sheet.
+const ACC_CATS = new Set(['meeting','ho','call','approval','site','culture','desk','other']);
 
 let roster = [];
 let selectedCats = new Set(['meeting']); // multi-select: several categories can share one time slot
@@ -831,6 +891,7 @@ document.getElementById('logoutBtn').addEventListener('click', ()=>{
 // ================= ROLE-BASED SHELL =================
 const MANAGER_TABS = [
   {id:'log', label:'My Day'},
+  {id:'plan', label:'My Week'},
   {id:'mystats', label:'My Stats'}
 ];
 const CEO_TABS = [
@@ -839,7 +900,7 @@ const CEO_TABS = [
   {id:'dash', label:'Dashboard'},
   {id:'roster', label:'Team List'}
 ];
-const ALL_TAB_IDS = ['log','mystats','team','dash','ceo','roster'];
+const ALL_TAB_IDS = ['log','plan','mystats','team','dash','ceo','roster'];
 
 function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
@@ -879,7 +940,7 @@ async function openTab(tabId, btnEl){
 
   // refresh from sheet for the data-heavy views (and My Day, so a phone
   // kept open all day never shows a stale morning snapshot)
-  if(['team','dash','ceo','mystats','log'].includes(tabId)){
+  if(['team','dash','ceo','mystats','log','plan'].includes(tabId)){
     try{ await refreshData(); }
     catch(e){ setSyncNote('Could not refresh from Google Sheet — showing last loaded data.'); }
   }
@@ -890,6 +951,7 @@ async function openTab(tabId, btnEl){
   if(tabId==='mystats') renderMyStats();
   if(tabId==='roster') renderRosterList();
   if(tabId==='log') loadExistingLog();
+  if(tabId==='plan') renderPlan();
 }
 
 // ================= ROSTER (CEO) =================
@@ -947,7 +1009,7 @@ document.getElementById('addRosterBtn').addEventListener('click', ()=>{
 // ================= CHIPS =================
 function renderChips(){
   const box = document.getElementById('catChips');
-  box.innerHTML = CATS.map(c=>{
+  box.innerHTML = CATS.filter(c=>!c.hidden).map(c=>{
     const sel = selectedCats.has(c.k);
     return `<button type="button" class="chip ${sel?'sel':''}" data-k="${c.k}" style="${sel?`background:${c.color};border-color:${c.color};`:''}">${c.label}</button>`;
   }).join('');
@@ -956,9 +1018,9 @@ function renderChips(){
     if(selectedCats.has(k)) selectedCats.delete(k); else selectedCats.add(k);
     renderChips();
   }));
-  // Meeting / HO Meeting selected -> show the with-whom / agenda / outcome fields
+  // Meeting / Phone Call selected -> show the with-whom / agenda / outcome fields
   document.getElementById('meetBox').classList.toggle('show',
-    selectedCats.has('meeting') || selectedCats.has('ho'));
+    selectedCats.has('meeting') || selectedCats.has('call'));
   renderOutcomeInputs();
 }
 
@@ -989,15 +1051,15 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   if(!start || !end){ alert('Enter start and end time.'); return; }
   const dur = timeToMin(end) - timeToMin(start);
   if(dur <= 0){ alert('End time must be after start time.'); return; }
-  // Meetings must carry accountability: with whom, agenda, outcome
-  const isMeeting = cats.includes('meeting') || cats.includes('ho');
+  // Meetings and phone calls must carry accountability: with whom, agenda, outcome
+  const isMeeting = cats.includes('meeting') || cats.includes('call');
   const who = document.getElementById('blkWho').value.trim();
   const agenda = document.getElementById('blkAgenda').value.trim();
   const outcome = document.getElementById('blkOutcome').value.trim();
   if(isMeeting){
-    if(!who){ alert('Meeting block: fill "With whom".'); return; }
-    if(!agenda){ alert('Meeting block: fill the agenda.'); return; }
-    if(!outcome){ alert('Meeting block: write the outcome — or the pending next step and who owns it.'); return; }
+    if(!who){ alert('Meeting/Call block: fill "With whom".'); return; }
+    if(!agenda){ alert('Meeting/Call block: fill the agenda / purpose.'); return; }
+    if(!outcome){ alert('Meeting/Call block: write the outcome — or the pending next step and who owns it.'); return; }
   }
   // Every other accountable category needs its own outcome line
   const catOutcomes = {};
@@ -1016,7 +1078,7 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
     const d = per + (remainder>0 ? 1 : 0);
     if(remainder>0) remainder--;
     const b = {cat:k, start, end, note, dur:d, split: cats.length>1};
-    if(k==='meeting' || k==='ho'){ b.who=who; b.agenda=agenda; b.outcome=outcome; }
+    if(k==='meeting' || k==='call'){ b.who=who; b.agenda=agenda; b.outcome=outcome; }
     if(catOutcomes[k]) b.outcome = catOutcomes[k];
     blocks.push(b);
   });
@@ -1075,6 +1137,99 @@ function loadExistingLog(){
   renderBlocks();
 }
 document.getElementById('logDate').addEventListener('change', loadExistingLog);
+
+// ================= MY WEEK PLANNER (managers) =================
+let planWeekOffset = 0;   // 0 = this week, +1 = next week (plan ahead), -1 = review last week
+let planItems = [];       // working copy for the week being viewed
+
+function planWeekKey(){ return weekDates(planWeekOffset)[0]; } // Monday YYYY-MM-DD
+
+function renderPlan(){
+  if(!auth || auth.role!=='manager') return;
+  const dates = weekDates(planWeekOffset);
+  const mon = new Date(dates[0]), sun = new Date(dates[6]);
+  document.getElementById('planWeekLabel').textContent =
+    mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' – ' +
+    sun.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) +
+    (planWeekOffset===0?' (this week)':planWeekOffset===1?' (next week)':'');
+  planItems = (plansIndex[auth.person.id + '|' + planWeekKey()] || []).map(x=>Object.assign({},x));
+  // category dropdown: accountable, visible categories
+  const sel = document.getElementById('planCat');
+  if(!sel.options.length || sel.options.length<2){
+    sel.innerHTML = CATS.filter(c=>!c.hidden && ACC_CATS.has(c.k))
+      .map(c=>`<option value="${c.k}">${c.label}</option>`).join('');
+  }
+  renderPlanList();
+}
+
+function renderPlanList(){
+  const box = document.getElementById('planList');
+  box.innerHTML = planItems.length ? planItems.map((it,i)=>{
+    const c = catMap[it.cat] || {label:it.cat, color:'#888'};
+    return `<div class="plan-item st-${it.status}">
+      <div>
+        <div class="pi-cat" style="color:${c.color};">${c.label}</div>
+        <div class="pi-text">${it.status==='done'?'✅ ':''}${it.text}</div>
+        ${it.result?`<div class="pi-result">→ ${it.result}</div>`:''}
+      </div>
+      <div class="pi-btns">
+        <button type="button" class="pi-btn ${it.status==='done'?'on-done':''}" data-i="${i}" data-st="done">Done</button>
+        <button type="button" class="pi-btn ${it.status==='moved'?'on-moved':''}" data-i="${i}" data-st="moved">Moved</button>
+        <button type="button" class="pi-btn ${it.status==='dropped'?'on-dropped':''}" data-i="${i}" data-st="dropped">Drop</button>
+        <button type="button" class="pi-btn" data-i="${i}" data-st="remove">✕</button>
+      </div>
+    </div>`;
+  }).join('') : `<div class="empty-note">No items planned for this week yet.</div>`;
+
+  box.querySelectorAll('.pi-btn').forEach(btn=>btn.addEventListener('click', e=>{
+    const i = +e.currentTarget.dataset.i;
+    const st = e.currentTarget.dataset.st;
+    if(st==='remove'){
+      if(confirm('Remove this planned item?')) { planItems.splice(i,1); renderPlanList(); }
+      return;
+    }
+    if(planItems[i].status===st){
+      // clicking the active status reverts to planned
+      planItems[i].status='planned'; planItems[i].result='';
+    } else if(st==='done'){
+      const res = prompt('What was the result / outcome of this item?', planItems[i].result||'');
+      if(res===null || !res.trim()){ alert('A Done item needs its result — same rule as daily blocks.'); return; }
+      planItems[i].status='done'; planItems[i].result=res.trim();
+    } else {
+      planItems[i].status=st; planItems[i].result='';
+    }
+    renderPlanList();
+  }));
+}
+
+document.getElementById('addPlanBtn').addEventListener('click', ()=>{
+  const text = document.getElementById('planText').value.trim();
+  const cat = document.getElementById('planCat').value;
+  if(!text){ alert('Write the planned item first.'); return; }
+  planItems.push({id:'pl_'+Date.now(), text, cat, status:'planned', result:''});
+  document.getElementById('planText').value='';
+  renderPlanList();
+});
+
+document.getElementById('planPrevWeek').addEventListener('click', ()=>{ planWeekOffset--; renderPlan(); });
+document.getElementById('planNextWeek').addEventListener('click', ()=>{ planWeekOffset++; renderPlan(); });
+
+document.getElementById('savePlanBtn').addEventListener('click', async ()=>{
+  if(!auth || auth.role!=='manager') return;
+  const btn = document.getElementById('savePlanBtn');
+  const st = document.getElementById('planStatus');
+  btn.disabled = true;
+  st.innerHTML = `<div class="status-msg sync">Saving plan to Google Sheet…</div>`;
+  try{
+    await apiPost({action:'savePlan', personId: auth.person.id, personName: auth.person.name, weekStart: planWeekKey(), items: planItems});
+    plansIndex[auth.person.id + '|' + planWeekKey()] = planItems.map(x=>Object.assign({},x));
+    st.innerHTML = `<div class="status-msg ok">Week plan saved.</div>`;
+    setTimeout(()=>{st.innerHTML='';}, 6000);
+  }catch(e){
+    st.innerHTML = `<div class="status-msg err">Save failed — check internet and tap Save again. Your items are still here.</div>`;
+  }
+  btn.disabled = false;
+});
 
 // ================= SHARED CALC HELPERS =================
 function getMonday(offset){
@@ -1165,7 +1320,7 @@ function renderTeamGrid(){
   const mon = new Date(dates[0]), sun = new Date(dates[6]);
   document.getElementById('weekLabel').textContent = `${mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${sun.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}`;
 
-  document.getElementById('legend').innerHTML = CATS.map(c=>`<span><i style="background:${c.color}"></i>${c.label}</span>`).join('');
+  document.getElementById('legend').innerHTML = CATS.filter(c=>!c.hidden).map(c=>`<span><i style="background:${c.color}"></i>${c.label}</span>`).join('');
 
   if(!roster.length){
     document.getElementById('teamGrid').innerHTML = `<tr><td class="empty-note">Add your team in the Team List tab first.</td></tr>`;
@@ -1476,6 +1631,8 @@ function renderCEO(){
     document.getElementById('ceoMeetWho').innerHTML='';
     document.getElementById('ceoOutcomes').innerHTML='';
     document.getElementById('ceoLedger').innerHTML='';
+    document.getElementById('ceoPlanTable').innerHTML='';
+    document.getElementById('ceoPlanItems').innerHTML='';
     document.getElementById('ceoFlags').innerHTML='';
     return;
   }
@@ -1488,7 +1645,7 @@ function renderCEO(){
 
   // ---- KPIs ----
   const effNow = cur.totalMin>0 ? Math.round((cur.totalMin-cur.idleMin)/cur.totalMin*100) : null;
-  const meetMin = (cur.catMin['meeting']||0) + (cur.catMin['ho']||0);
+  const meetMin = (cur.catMin['meeting']||0) + (cur.catMin['ho']||0) + (cur.catMin['call']||0);
   const meetLoad = cur.totalMin>0 ? Math.round(meetMin/cur.totalMin*100) : null;
   const disciplinePct = Math.round(cur.submittedCount/(ids.length*elapsed)*100);
   const avgPerDay = cur.submittedCount>0 ? (cur.totalMin/60/cur.submittedCount).toFixed(1)+'h' : '—';
@@ -1507,6 +1664,7 @@ function renderCEO(){
   } else {
     const maxMin = Math.max(...CATS.map(c=>cur.catMin[c.k]||0), 1);
     barsBox.innerHTML = CATS
+      .filter(c=>!c.hidden || (cur.catMin[c.k]||0)>0)
       .map(c=>{
         const m = cur.catMin[c.k]||0;
         const shareNow = cur.totalMin>0 ? m/cur.totalMin*100 : 0;
@@ -1543,7 +1701,7 @@ function renderCEO(){
       if(ACC_CATS.has(b.cat)) accBlocks.push({p, date:d, b});
     });
   }));
-  const meetBlocks = accBlocks.filter(x=>x.b.cat==='meeting' || x.b.cat==='ho');
+  const meetBlocks = accBlocks.filter(x=>x.b.cat==='meeting' || x.b.cat==='ho' || x.b.cat==='call');
   const hasOutcome = x => !!(x.b.outcome && x.b.outcome.trim());
   const mCount = meetBlocks.length;
   const mMin = meetBlocks.reduce((s,x)=>s+x.b.dur,0);
@@ -1552,14 +1710,27 @@ function renderCEO(){
   const accOutcomePct = accBlocks.length>0 ? Math.round(accWithOutcome/accBlocks.length*100) : null;
   document.getElementById('ceoMeetKpis').innerHTML = accBlocks.length>0 ? `
     <div class="kpi"><div class="num">${accOutcomePct}%</div><div class="lbl">Outcome Recorded (all work)</div></div>
-    <div class="kpi"><div class="num">${mCount}</div><div class="lbl">Meetings</div></div>
-    <div class="kpi"><div class="num">${fmtH(mMin)}</div><div class="lbl">Meeting Hours</div></div>
-    <div class="kpi"><div class="num">${avgLen!==null?avgLen+'m':'—'}</div><div class="lbl">Avg Meeting Length</div></div>
+    <div class="kpi"><div class="num">${mCount}</div><div class="lbl">Meetings + Calls</div></div>
+    <div class="kpi"><div class="num">${fmtH(mMin)}</div><div class="lbl">Meeting/Call Hours</div></div>
+    <div class="kpi"><div class="num">${avgLen!==null?avgLen+'m':'—'}</div><div class="lbl">Avg Length</div></div>
   ` : `<div class="empty-note">No work logged this week yet.</div>`;
 
-  // Who leadership is meeting — group by the "with whom" text
+  // ---- Feed filters (survive re-render) ----
+  const pSel = document.getElementById('ceoFilterPerson');
+  const cSel = document.getElementById('ceoFilterCat');
+  const pPrev = pSel.value || 'all', cPrev = cSel.value || 'all';
+  pSel.innerHTML = `<option value="all">All managers</option>` +
+    roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  cSel.innerHTML = `<option value="all">All activities</option>` +
+    CATS.filter(c=>!c.hidden && ACC_CATS.has(c.k)).map(c=>`<option value="${c.k}">${c.label}</option>`).join('');
+  pSel.value = pPrev; if(!pSel.value) pSel.value='all';
+  cSel.value = cPrev; if(!cSel.value) cSel.value='all';
+  const pFilter = pSel.value, cFilter = cSel.value;
+  const filtered = pFilter!=='all' || cFilter!=='all';
+
+  // Who leadership is meeting — group by the "with whom" text (respects manager filter)
   const whoMap = {};
-  meetBlocks.forEach(x=>{
+  meetBlocks.filter(x=>pFilter==='all' || x.p.id===pFilter).forEach(x=>{
     const key = (x.b.who && x.b.who.trim()) ? x.b.who.trim() : '(not recorded)';
     whoMap[key] = (whoMap[key]||0) + x.b.dur;
   });
@@ -1573,13 +1744,16 @@ function renderCEO(){
         </div>`).join('')
     : `<div class="empty-note">Nothing to show yet.</div>`;
 
-  // Outcomes feed — all accountable work, missing outcomes surfaced on top
-  const feed = accBlocks.slice().sort((a,b)=>{
-    const am = hasOutcome(a) ? 1 : 0;
-    const bm = hasOutcome(b) ? 1 : 0;
-    if(am!==bm) return am-bm;                 // missing outcomes first
-    return b.date.localeCompare(a.date);      // then newest
-  }).slice(0,12);
+  // Outcomes feed — all accountable work, missing outcomes surfaced on top.
+  // Filters narrow it to one manager and/or one activity; a filtered view shows more rows.
+  const feed = accBlocks
+    .filter(x=>(pFilter==='all' || x.p.id===pFilter) && (cFilter==='all' || x.b.cat===cFilter))
+    .sort((a,b)=>{
+      const am = hasOutcome(a) ? 1 : 0;
+      const bm = hasOutcome(b) ? 1 : 0;
+      if(am!==bm) return am-bm;                 // missing outcomes first
+      return b.date.localeCompare(a.date);      // then newest
+    }).slice(0, filtered ? 40 : 12);
   document.getElementById('ceoOutcomes').innerHTML = feed.length
     ? feed.map(x=>{
         const hasOut = hasOutcome(x);
@@ -1590,7 +1764,7 @@ function renderCEO(){
           <div class="om-out ${hasOut?'':'missing'}">${hasOut?'→ '+x.b.outcome:'→ No outcome recorded'}</div>
         </div>`;
       }).join('')
-    : `<div class="empty-note">No work logged this week yet.</div>`;
+    : `<div class="empty-note">${filtered?'Nothing logged this week for this filter.':'No work logged this week yet.'}</div>`;
 
   // ---- Leadership Time Ledger ----
   const ledgerRows = roster.map(p=>{
@@ -1615,6 +1789,47 @@ function renderCEO(){
       <td>${r.topMin>0?`${r.topCat} (${fmtH(r.topMin)})`:'—'}</td>
     </tr>`).join('');
 
+  // ---- Plan vs Achieved ----
+  const thisMonday = thisWkDates[0];
+  const planRows = roster.map(p=>{
+    const items = plansIndex[p.id + '|' + thisMonday] || [];
+    const done = items.filter(x=>x.status==='done').length;
+    const moved = items.filter(x=>x.status==='moved').length;
+    const dropped = items.filter(x=>x.status==='dropped').length;
+    const donePct = items.length>0 ? Math.round(done/items.length*100) : null;
+    return {p, items, done, moved, dropped, donePct};
+  }).sort((a,b)=>b.items.length - a.items.length);
+
+  document.getElementById('ceoPlanTable').innerHTML =
+    `<tr><th>Name</th><th>Planned</th><th>Done</th><th>Moved</th><th>Dropped</th><th>Done %</th></tr>` +
+    planRows.map(r=>`<tr>
+      <td class="pred-name">${r.p.name}</td>
+      <td>${r.items.length||'—'}</td>
+      <td>${r.items.length?r.done:'—'}</td>
+      <td>${r.items.length?r.moved:'—'}</td>
+      <td>${r.items.length?r.dropped:'—'}</td>
+      <td>${r.donePct!==null?r.donePct+'%':'No plan'}</td>
+    </tr>`).join('');
+
+  // Drill-down: one manager's plan items (selection survives re-render)
+  const planSel = document.getElementById('ceoPlanPerson');
+  const planPrev = planSel.value || '';
+  planSel.innerHTML = `<option value="">— Select manager —</option>` +
+    roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  planSel.value = planPrev;
+  const chosen = planRows.find(r=>r.p.id===planSel.value);
+  document.getElementById('ceoPlanItems').innerHTML = !planSel.value ? '' :
+    (chosen && chosen.items.length
+      ? chosen.items.map(it=>{
+          const c = catMap[it.cat] || {label:it.cat, color:'#888'};
+          const mark = it.status==='done'?'✅':it.status==='moved'?'↪':it.status==='dropped'?'✕':'○';
+          return `<div class="outcome-row">
+            <div class="om-head">${mark} ${it.text} <span class="om-agenda">· ${c.label} · ${it.status}</span></div>
+            ${it.result?`<div class="om-out">→ ${it.result}</div>`:''}
+          </div>`;
+        }).join('')
+      : `<div class="empty-note">No plan saved by this manager for this week.</div>`);
+
   // ---- Needs Attention ----
   const flags = [];
   ledgerRows.forEach(r=>{
@@ -1629,7 +1844,7 @@ function renderCEO(){
     const avgH = r.s.totalMin/60/r.s.submittedCount;
     if(avgH < 6 && r.s.submittedCount >= 2) flags.push({name:r.p.name, msg:`Averaging only ${avgH.toFixed(1)}h logged per reported day.`});
     // Meeting overload: over 40% of a full-ish week sitting in meetings
-    const pMeetMin = (r.s.catMin['meeting']||0) + (r.s.catMin['ho']||0);
+    const pMeetMin = (r.s.catMin['meeting']||0) + (r.s.catMin['ho']||0) + (r.s.catMin['call']||0);
     if(r.s.totalMin >= 240 && pMeetMin/r.s.totalMin > 0.40)
       flags.push({name:r.p.name, msg:`${Math.round(pMeetMin/r.s.totalMin*100)}% of the week in meetings — is delegation possible?`});
   });
@@ -1640,6 +1855,15 @@ function renderCEO(){
   });
   Object.entries(noOutBy).forEach(([name,n])=>{
     flags.push({name, msg:`${n} logged block${n>1?'s':''} this week with no outcome recorded — what did the time produce?`});
+  });
+  // Planner discipline: no plan by mid-week, or low completion late in the week
+  planRows.forEach(r=>{
+    if(r.items.length===0 && elapsed>=3){
+      flags.push({name:r.p.name, msg:`No week plan saved (${elapsed} days in) — running on incoming work, not priorities.`});
+    }
+    if(r.items.length>=3 && elapsed>=5 && r.donePct!==null && r.donePct<50){
+      flags.push({name:r.p.name, msg:`Only ${r.donePct}% of planned items done by day ${elapsed} — overcommitted or blocked?`});
+    }
   });
   document.getElementById('ceoFlags').innerHTML = flags.length
     ? flags.map(f=>`<div class="insight-row"><div class="insight-name">${f.name}</div><div class="insight-val" style="text-align:right;">${f.msg}</div></div>`).join('')
