@@ -428,13 +428,22 @@ table.grid-table td{
 .login-err{color:var(--flag); font-size:12px; font-weight:600; margin-top:10px; min-height:16px;}
 .login-hint{font-size:11px; color:var(--grey); margin-top:14px; line-height:1.5;}
 
-/* ---- CEO calendar view ---- */
-table.cal-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
-table.cal-table th{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:9.5px;color:var(--grey,#888);padding:4px 2px;text-transform:uppercase;border-bottom:1px solid var(--line,#ddd);}
-table.cal-table th.today-col, table.cal-table td.today-col{background:rgba(201,162,39,.07);}
-table.cal-table td{border:1px solid var(--line,#eee);vertical-align:top;padding:2px;height:26px;}
-table.cal-table td.cal-hour{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--grey,#888);white-space:nowrap;width:52px;border-left:none;text-align:right;padding-right:5px;}
-.cal-chip{display:block;color:#fff;border-radius:3px;padding:1px 4px;font-size:10px;line-height:1.4;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
+/* ---- CEO calendar view (true calendar: one positioned block per task) ---- */
+.cal-flex{display:flex;min-width:0;}
+.cal-hours{width:54px;flex-shrink:0;}
+.cal-hours .cal-hcell{height:28px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--grey,#888);text-align:right;padding-right:6px;transform:translateY(-6px);}
+.cal-days{display:flex;flex:1;min-width:0;}
+.cal-day{flex:1;min-width:96px;border-left:1px solid var(--line,#e5e0d5);}
+.cal-day-head{font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;color:var(--grey,#888);text-transform:uppercase;text-align:center;padding:4px 2px;border-bottom:1px solid var(--line,#ddd);}
+.cal-day.today .cal-day-head, .cal-day.today .cal-day-body{background:rgba(201,162,39,.07);}
+.cal-day-body{position:relative;background-image:repeating-linear-gradient(to bottom, transparent 0, transparent 27px, var(--line,#e5e0d5) 27px, var(--line,#e5e0d5) 28px);}
+.cal-block{position:absolute;border-radius:4px;color:#fff;font-size:10px;line-height:1.35;padding:2px 5px;overflow:hidden;cursor:default;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+.cal-block .cb-cat{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-block .cb-note{opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sum-row-click{cursor:pointer;}
+.sum-row-click:hover td{background:rgba(0,0,0,.03);}
+.sum-detail td{padding:0 8px 10px !important;}
+.sum-detail .outcome-row{font-size:12px;}
 /* ---- Week planner ---- */
 .plan-item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--line,#eee);}
 .plan-item:last-child{border-bottom:none;}
@@ -730,14 +739,29 @@ table.cal-table td.cal-hour{font-family:'IBM Plex Mono',monospace;font-size:9.5p
           <select id="calSite" onchange="renderCal()"><option value="all">All</option></select>
         </div>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="cal-table" id="calGrid"></table>
+      <div class="filter-row">
+        <div>
+          <label style="margin-top:0;">From (custom range)</label>
+          <input type="date" id="calFrom">
+        </div>
+        <div>
+          <label style="margin-top:0;">To</label>
+          <input type="date" id="calTo">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px;">
+          <button type="button" class="small-btn" id="calApplyRange">Apply Range</button>
+          <button type="button" class="small-btn" id="calClearRange">This Week</button>
+        </div>
       </div>
-      <div class="hint">Each cell is one hour of one day; colored blocks show what that hour went to. Hover a block for the details (who / agenda / outcome / note). Site filter uses the Site / Office dropdown managers pick when logging; old entries from before the dropdown appear under "(not set)".</div>
+      <div style="overflow-x:auto;">
+        <div id="calGrid"></div>
+      </div>
+      <div class="hint">One block = one task; taller blocks took longer. Hover a block for details (site / who / agenda / outcome). Use From–To for a custom range (up to 31 days); ‹ › moves by a week, or by the range length when a custom range is set.</div>
     </div>
     <div class="card">
       <h2>Summary — Hours by Activity</h2>
       <table class="pred-table" id="calSummary"></table>
+      <div class="hint">Totals follow the filters and date range above. Click an activity row to see every task logged under it — date, time, site and outcome.</div>
     </div>
   </div>
 
@@ -1931,25 +1955,82 @@ function renderCEO(){
 }
 
 // ================= CALENDAR VIEW (CEO) =================
-// Rows = hours, columns = the 7 days of the chosen week, cells = colored
-// activity blocks. Filters: manager, activity, site (from block notes).
+// A true calendar: columns are days, each task is ONE positioned block whose
+// height = its duration. Week mode by default; a custom From-To range (max
+// 31 days) overrides it. Summary follows the same filters and range, and
+// each activity row expands to its micro-tasks on click.
 let calWeekOffset = 0;
+let calRange = null;      // null = week mode, else {from:'YYYY-MM-DD', to:'YYYY-MM-DD'}
+let calSumOpen = null;    // activity key expanded in the summary, or null
+const CAL_HROW = 28;      // px per hour
 
-document.getElementById('calPrevWeek').addEventListener('click', ()=>{ calWeekOffset--; renderCal(); });
-document.getElementById('calNextWeek').addEventListener('click', ()=>{ calWeekOffset++; renderCal(); });
+function addDays(dateStr, n){
+  const d = new Date(dateStr); d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10);
+}
+function calDates(){
+  if(calRange){
+    const out = [];
+    let d = calRange.from;
+    while(d <= calRange.to && out.length < 31){ out.push(d); d = addDays(d,1); }
+    return out;
+  }
+  return weekDates(calWeekOffset);
+}
+
+document.getElementById('calPrevWeek').addEventListener('click', ()=>{
+  if(calRange){
+    const len = calDates().length;
+    calRange = {from: addDays(calRange.from, -len), to: addDays(calRange.to, -len)};
+    document.getElementById('calFrom').value = calRange.from;
+    document.getElementById('calTo').value = calRange.to;
+  } else calWeekOffset--;
+  renderCal();
+});
+document.getElementById('calNextWeek').addEventListener('click', ()=>{
+  if(calRange){
+    const len = calDates().length;
+    calRange = {from: addDays(calRange.from, len), to: addDays(calRange.to, len)};
+    document.getElementById('calFrom').value = calRange.from;
+    document.getElementById('calTo').value = calRange.to;
+  } else calWeekOffset++;
+  renderCal();
+});
+document.getElementById('calApplyRange').addEventListener('click', ()=>{
+  const f = document.getElementById('calFrom').value;
+  const t = document.getElementById('calTo').value;
+  if(!f || !t){ alert('Pick both From and To dates.'); return; }
+  if(f > t){ alert('From must be before To.'); return; }
+  const days = Math.round((new Date(t)-new Date(f))/86400000)+1;
+  if(days > 31){ alert('Maximum range is 31 days — pick a shorter window.'); return; }
+  calRange = {from:f, to:t};
+  calSumOpen = null;
+  renderCal();
+});
+document.getElementById('calClearRange').addEventListener('click', ()=>{
+  calRange = null; calWeekOffset = 0; calSumOpen = null;
+  document.getElementById('calFrom').value='';
+  document.getElementById('calTo').value='';
+  renderCal();
+});
+
+function calToggleSum(k){
+  calSumOpen = (calSumOpen===k) ? null : k;
+  renderCal();
+}
 
 function renderCal(){
   if(!roster.length){
-    document.getElementById('calGrid').innerHTML = `<tr><td class="empty-note">Add your team first in the Team List tab.</td></tr>`;
+    document.getElementById('calGrid').innerHTML = `<div class="empty-note">Add your team first in the Team List tab.</div>`;
     document.getElementById('calSummary').innerHTML='';
     return;
   }
-  const dates = weekDates(calWeekOffset);
-  const mon = new Date(dates[0]), sun = new Date(dates[6]);
+  const dates = calDates();
+  const first = new Date(dates[0]), last = new Date(dates[dates.length-1]);
   document.getElementById('calWeekLabel').textContent =
-    mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' – ' +
-    sun.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) +
-    (calWeekOffset===0?' (this week)':'');
+    first.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' \u2013 ' +
+    last.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) +
+    (calRange ? ` (${dates.length} days)` : (calWeekOffset===0?' (this week)':''));
 
   // ---- Filters (selections survive re-render) ----
   const pSel = document.getElementById('calPerson');
@@ -1962,7 +2043,7 @@ function renderCal(){
     CATS.filter(c=>!c.hidden).map(c=>`<option value="${c.k}">${c.label}</option>`).join('');
   cSel.value = cPrev; if(!cSel.value) cSel.value='all';
 
-  // Collect this manager's blocks for the week (with date attached)
+  // Collect this manager's blocks for the visible dates
   let wkBlocks = [];
   dates.forEach(d=>{
     (getBlocks(pSel.value, d)||[]).forEach(b=>wkBlocks.push({date:d, b}));
@@ -1974,7 +2055,7 @@ function renderCal(){
   const hasLegacy = wkBlocks.some(x=>!x.b.site);
   sSel.innerHTML = `<option value="all">All</option>` +
     siteVals.map(n=>`<option value="${n}">${n}</option>`).join('') +
-    (hasLegacy ? `<option value="__none__">(not set — old logs)</option>` : '');
+    (hasLegacy ? `<option value="__none__">(not set \u2014 old logs)</option>` : '');
   sSel.value = sPrev; if(!sSel.value) sSel.value='all';
 
   // Apply activity + site filters
@@ -1982,43 +2063,62 @@ function renderCal(){
     (cSel.value==='all' || x.b.cat===cSel.value) &&
     (sSel.value==='all' || (sSel.value==='__none__' ? !x.b.site : x.b.site===sSel.value)));
 
-  // ---- Hour range: from the data, defaulting to 8:00–20:00 ----
+  // ---- Hour range: from the data, defaulting to 8:00-20:00 ----
   let minH = 8, maxH = 20;
   wkBlocks.forEach(x=>{
     minH = Math.min(minH, Math.floor(timeToMin(x.b.start)/60));
     maxH = Math.max(maxH, Math.ceil(timeToMin(x.b.end)/60));
   });
   minH = Math.max(0, minH); maxH = Math.min(24, maxH);
+  const bodyH = (maxH-minH)*CAL_HROW;
 
-  // ---- Grid ----
+  // ---- Grid: hour label column + one positioned column per day ----
   const today = todayStr();
-  let html = `<tr><th></th>` + dates.map(d=>{
+  let hourCol = `<div class="cal-hours"><div class="cal-day-head">&nbsp;</div>`;
+  for(let h=minH; h<maxH; h++) hourCol += `<div class="cal-hcell">${fmt12(pad(h)+':00')}</div>`;
+  hourCol += `</div>`;
+
+  const dayCols = dates.map(d=>{
     const dd = new Date(d);
-    return `<th class="${d===today?'today-col':''}">${DAY_LABELS[(dd.getDay()+6)%7]}<br>${dd.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</th>`;
-  }).join('') + `</tr>`;
-
-  for(let h=minH; h<maxH; h++){
-    html += `<tr><td class="cal-hour">${fmt12(pad(h)+':00')}</td>`;
-    dates.forEach(d=>{
-      const cellBlocks = wkBlocks.filter(x=>x.date===d &&
-        timeToMin(x.b.start) < (h+1)*60 && timeToMin(x.b.end) > h*60);
-      const chips = cellBlocks.map(x=>{
-        const c = catMap[x.b.cat] || {label:x.b.cat, color:'#888'};
-        const tip = [c.label+' '+fmt12(x.b.start)+'–'+fmt12(x.b.end),
-                     x.b.site?('Site: '+x.b.site):'',
-                     x.b.note?('Details: '+x.b.note):'',
-                     x.b.who?('With: '+x.b.who):'',
-                     x.b.agenda?('Agenda: '+x.b.agenda):'',
-                     x.b.outcome?('Outcome: '+x.b.outcome):''].filter(Boolean).join('\n');
-        return `<span class="cal-chip" style="background:${c.color};" title="${tip.replace(/"/g,'&quot;')}">${c.label}</span>`;
-      }).join('');
-      html += `<td class="${d===today?'today-col':''}">${chips}</td>`;
+    const dayBlocks = wkBlocks.filter(x=>x.date===d)
+      .sort((a,b)=>timeToMin(a.b.start)-timeToMin(b.b.start));
+    // lane assignment so overlapping tasks (shared slots) sit side by side
+    const lanes = [];
+    dayBlocks.forEach(x=>{
+      const st = timeToMin(x.b.start);
+      let li = lanes.findIndex(end=>end <= st);
+      if(li<0){ li = lanes.length; lanes.push(0); }
+      lanes[li] = timeToMin(x.b.end);
+      x.lane = li;
     });
-    html += `</tr>`;
-  }
-  document.getElementById('calGrid').innerHTML = html;
+    const laneCount = Math.max(1, lanes.length);
+    const blocksHtml = dayBlocks.map(x=>{
+      const c = catMap[x.b.cat] || {label:x.b.cat, color:'#888'};
+      const top = (timeToMin(x.b.start)/60 - minH)*CAL_HROW;
+      const h = Math.max(14, (x.b.dur/60)*CAL_HROW - 2);
+      const w = 100/laneCount;
+      const tip = [c.label+' '+fmt12(x.b.start)+'\u2013'+fmt12(x.b.end)+' ('+fmtHM(x.b.dur)+')',
+                   x.b.site?('Site: '+x.b.site):'',
+                   x.b.note?('Details: '+x.b.note):'',
+                   x.b.who?('With: '+x.b.who):'',
+                   x.b.agenda?('Agenda: '+x.b.agenda):'',
+                   x.b.outcome?('Outcome: '+x.b.outcome):''].filter(Boolean).join('\n');
+      const sub = x.b.note || x.b.agenda || x.b.site || '';
+      return `<div class="cal-block" style="background:${c.color};top:${top}px;height:${h}px;left:calc(${x.lane*w}% + 2px);width:calc(${w}% - 4px);" title="${tip.replace(/"/g,'&quot;')}">
+        <div class="cb-cat">${c.label}</div>
+        ${h>=26 && sub ? `<div class="cb-note">${sub}</div>` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="cal-day ${d===today?'today':''}">
+      <div class="cal-day-head">${DAY_LABELS[(dd.getDay()+6)%7]}<br>${dd.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</div>
+      <div class="cal-day-body" style="height:${bodyH}px;">${blocksHtml}</div>
+    </div>`;
+  }).join('');
 
-  // ---- Summary: hours per activity for the filtered week ----
+  document.getElementById('calGrid').innerHTML =
+    `<div class="cal-flex">${hourCol}<div class="cal-days">${dayCols}</div></div>`;
+
+  // ---- Summary: hours per activity for the filtered range; click to expand ----
   const sumMin = {};
   wkBlocks.forEach(x=>{ sumMin[x.b.cat] = (sumMin[x.b.cat]||0) + x.b.dur; });
   const totalMin = Object.values(sumMin).reduce((s,v)=>s+v,0);
@@ -2026,13 +2126,27 @@ function renderCal(){
     ? `<tr><th>Activity</th><th>Hours</th><th>Share</th></tr>` +
       CATS.filter(c=>sumMin[c.k]>0)
         .sort((a,b)=>(sumMin[b.k]||0)-(sumMin[a.k]||0))
-        .map(c=>`<tr>
-          <td class="pred-name"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.color};margin-right:6px;"></span>${c.label}</td>
-          <td>${fmtH(sumMin[c.k])}</td>
-          <td>${Math.round(sumMin[c.k]/totalMin*100)}%</td>
-        </tr>`).join('') +
+        .map(c=>{
+          const row = `<tr class="sum-row-click" onclick="calToggleSum('${c.k}')">
+            <td class="pred-name"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.color};margin-right:6px;"></span>${c.label} <span style="color:var(--grey);font-size:10px;">${calSumOpen===c.k?'\u25B2':'\u25BC'}</span></td>
+            <td>${fmtH(sumMin[c.k])}</td>
+            <td>${Math.round(sumMin[c.k]/totalMin*100)}%</td>
+          </tr>`;
+          if(calSumOpen!==c.k) return row;
+          const items = wkBlocks.filter(x=>x.b.cat===c.k)
+            .sort((a,b)=>a.date===b.date ? timeToMin(a.b.start)-timeToMin(b.b.start) : a.date.localeCompare(b.date));
+          const detail = items.map(x=>{
+            const dd = new Date(x.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+            return `<div class="outcome-row">
+              <div class="om-head">${dd} \u00B7 ${fmt12(x.b.start)}\u2013${fmt12(x.b.end)} (${fmtHM(x.b.dur)})${x.b.site?' \u00B7 '+x.b.site:''}${x.b.note?' \u2014 '+x.b.note:''}${x.b.who?' \u2014 with '+x.b.who:''}</div>
+              ${x.b.agenda?`<div class="om-agenda">Agenda: ${x.b.agenda}</div>`:''}
+              ${x.b.outcome?`<div class="om-out">\u2192 ${x.b.outcome}</div>`:`<div class="om-out missing">\u2192 No outcome recorded</div>`}
+            </div>`;
+          }).join('');
+          return row + `<tr class="sum-detail"><td colspan="3">${detail}</td></tr>`;
+        }).join('') +
       `<tr><td class="pred-name"><strong>Total</strong></td><td><strong>${fmtH(totalMin)}</strong></td><td></td></tr>`
-    : `<tr><td class="empty-note">Nothing logged for this filter in this week.</td></tr>`;
+    : `<tr><td class="empty-note">Nothing logged for this filter in this range.</td></tr>`;
 }
 
 // ================= INIT =================
