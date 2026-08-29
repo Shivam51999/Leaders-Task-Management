@@ -428,6 +428,13 @@ table.grid-table td{
 .login-err{color:var(--flag); font-size:12px; font-weight:600; margin-top:10px; min-height:16px;}
 .login-hint{font-size:11px; color:var(--grey); margin-top:14px; line-height:1.5;}
 
+/* ---- CEO calendar view ---- */
+table.cal-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
+table.cal-table th{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:9.5px;color:var(--grey,#888);padding:4px 2px;text-transform:uppercase;border-bottom:1px solid var(--line,#ddd);}
+table.cal-table th.today-col, table.cal-table td.today-col{background:rgba(201,162,39,.07);}
+table.cal-table td{border:1px solid var(--line,#eee);vertical-align:top;padding:2px;height:26px;}
+table.cal-table td.cal-hour{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--grey,#888);white-space:nowrap;width:52px;border-left:none;text-align:right;padding-right:5px;}
+.cal-chip{display:block;color:#fff;border-radius:3px;padding:1px 4px;font-size:10px;line-height:1.4;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
 /* ---- Week planner ---- */
 .plan-item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--line,#eee);}
 .plan-item:last-child{border-bottom:none;}
@@ -521,8 +528,10 @@ table.grid-table td{
         <div><label>From</label><input type="time" id="blkStart"></div>
         <div><label>To</label><input type="time" id="blkEnd"></div>
       </div>
-      <label>Where / what (site name, party, item)</label>
-      <input type="text" id="blkNote" placeholder="e.g. Starview site, Aikyam deed signing">
+      <label>Site / Office</label>
+      <select id="blkSite"><option value="">— Select site / office —</option></select>
+      <label>Details (party, item — optional; required if site is "Other")</label>
+      <input type="text" id="blkNote" placeholder="e.g. Aikyam deed signing, slab inspection">
 
       <div class="meet-box" id="meetBox">
         <div class="mb-title">Meeting / Call details — required</div>
@@ -699,6 +708,39 @@ table.grid-table td{
     </div>
   </div>
 
+  <!-- CALENDAR TAB (CEO) — where time flows, per manager / activity / site -->
+  <div id="tab-cal" style="display:none;">
+    <div class="card">
+      <div class="nav-week">
+        <button id="calPrevWeek">‹</button>
+        <div class="wk-label" id="calWeekLabel"></div>
+        <button id="calNextWeek">›</button>
+      </div>
+      <div class="filter-row">
+        <div>
+          <label style="margin-top:0;">Manager</label>
+          <select id="calPerson" onchange="renderCal()"></select>
+        </div>
+        <div>
+          <label style="margin-top:0;">Activity</label>
+          <select id="calCat" onchange="renderCal()"><option value="all">All activities</option></select>
+        </div>
+        <div>
+          <label style="margin-top:0;">Site / Where</label>
+          <select id="calSite" onchange="renderCal()"><option value="all">All</option></select>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="cal-table" id="calGrid"></table>
+      </div>
+      <div class="hint">Each cell is one hour of one day; colored blocks show what that hour went to. Hover a block for the details (who / agenda / outcome / note). Site filter uses the Site / Office dropdown managers pick when logging; old entries from before the dropdown appear under "(not set)".</div>
+    </div>
+    <div class="card">
+      <h2>Summary — Hours by Activity</h2>
+      <table class="pred-table" id="calSummary"></table>
+    </div>
+  </div>
+
   <!-- ROSTER TAB (CEO) -->
   <div id="tab-roster" style="display:none;">
     <div class="card">
@@ -823,6 +865,10 @@ const OUTCOME_CATS = {
 // 'ho' stays for legacy data already saved in the Sheet.
 const ACC_CATS = new Set(['meeting','ho','call','approval','site','culture','desk','other']);
 
+// Site / office list for the "Site" dropdown. Edit this list as projects
+// launch or close — 'Other' must stay last.
+const SITES = ['HO / Office','Mithila','Miraya','Mithila-2','Momento','Starview','Shyni','Niyoshi Park','Melizma','Aikyam','Marvel','Other'];
+
 let roster = [];
 let selectedCats = new Set(['meeting']); // multi-select: several categories can share one time slot
 let blocks = [];
@@ -897,10 +943,11 @@ const MANAGER_TABS = [
 const CEO_TABS = [
   {id:'team', label:'Team View'},
   {id:'ceo', label:'CEO View'},
+  {id:'cal', label:'Calendar'},
   {id:'dash', label:'Dashboard'},
   {id:'roster', label:'Team List'}
 ];
-const ALL_TAB_IDS = ['log','plan','mystats','team','dash','ceo','roster'];
+const ALL_TAB_IDS = ['log','plan','mystats','team','dash','ceo','cal','roster'];
 
 function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
@@ -919,6 +966,8 @@ function enterApp(){
 
   if(!isCeo){
     document.getElementById('stickyNameValue').textContent = `${auth.person.name} — ${auth.person.role || auth.person.type}`;
+    document.getElementById('blkSite').innerHTML = `<option value="">— Select site / office —</option>` +
+      SITES.map(x=>`<option value="${x}">${x}</option>`).join('');
     renderChips();
     document.getElementById('logDate').value = todayStr();
     loadExistingLog();
@@ -940,7 +989,7 @@ async function openTab(tabId, btnEl){
 
   // refresh from sheet for the data-heavy views (and My Day, so a phone
   // kept open all day never shows a stale morning snapshot)
-  if(['team','dash','ceo','mystats','log','plan'].includes(tabId)){
+  if(['team','dash','ceo','cal','mystats','log','plan'].includes(tabId)){
     try{ await refreshData(); }
     catch(e){ setSyncNote('Could not refresh from Google Sheet — showing last loaded data.'); }
   }
@@ -948,6 +997,7 @@ async function openTab(tabId, btnEl){
   if(tabId==='team') renderTeamGrid();
   if(tabId==='dash') renderDashboard();
   if(tabId==='ceo') renderCEO();
+  if(tabId==='cal') renderCal();
   if(tabId==='mystats') renderMyStats();
   if(tabId==='roster') renderRosterList();
   if(tabId==='log') loadExistingLog();
@@ -1061,6 +1111,11 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
     if(!agenda){ alert('Meeting/Call block: fill the agenda / purpose.'); return; }
     if(!outcome){ alert('Meeting/Call block: write the outcome — or the pending next step and who owns it.'); return; }
   }
+  // Site is required for all accountable work; "Other" must say where in Details
+  const site = document.getElementById('blkSite').value;
+  const hasAccCat = cats.some(k=>ACC_CATS.has(k));
+  if(hasAccCat && !site){ alert('Select the Site / Office for this block.'); return; }
+  if(site==='Other' && !note){ alert('Site is "Other" — write where in the Details field.'); return; }
   // Every other accountable category needs its own outcome line
   const catOutcomes = {};
   for(const k of Object.keys(OUTCOME_CATS)){
@@ -1078,6 +1133,7 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
     const d = per + (remainder>0 ? 1 : 0);
     if(remainder>0) remainder--;
     const b = {cat:k, start, end, note, dur:d, split: cats.length>1};
+    if(site) b.site = site;
     if(k==='meeting' || k==='call'){ b.who=who; b.agenda=agenda; b.outcome=outcome; }
     if(catOutcomes[k]) b.outcome = catOutcomes[k];
     blocks.push(b);
@@ -1085,6 +1141,7 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   document.getElementById('blkStart').value='';
   document.getElementById('blkEnd').value='';
   document.getElementById('blkNote').value='';
+  document.getElementById('blkSite').value='';
   document.getElementById('blkWho').value='';
   document.getElementById('blkAgenda').value='';
   document.getElementById('blkOutcome').value='';
@@ -1100,7 +1157,7 @@ function renderBlocks(){
       ? `<div class="meta">👥 ${b.who||'—'} · ${b.agenda||'—'}<br>→ ${b.outcome||'—'}</div>`
       : (b.outcome ? `<div class="meta">→ ${b.outcome}</div>` : '');
     return `<div class="block-item" style="border-left-color:${c.color}">
-      <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})</div>${meetLine}</div>
+      <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})${b.site?' · '+b.site:''}</div>${meetLine}</div>
       <button data-i="${i}">✕</button>
     </div>`;
   }).join('');
@@ -1371,8 +1428,11 @@ function showDetailModal(person, date, blks){
     const total = blks.reduce((s,b)=>s+b.dur,0);
     body = blks.map(b=>{
       const c = catMap[b.cat];
+      const detail = (b.who||b.agenda)
+        ? `<div class="meta">👥 ${b.who||'—'} · ${b.agenda||'—'}<br>→ ${b.outcome||'—'}</div>`
+        : (b.outcome ? `<div class="meta">→ ${b.outcome}</div>` : '');
       return `<div class="block-item" style="border-left-color:${c.color}">
-        <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})</div></div>
+        <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})${b.site?' · '+b.site:''}</div>${detail}</div>
       </div>`;
     }).join('') + `<div class="total-line"><span>Total</span><span>${fmtHM(total)}</span></div>`;
   }
@@ -1759,7 +1819,7 @@ function renderCEO(){
         const hasOut = hasOutcome(x);
         const dd = new Date(x.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
         return `<div class="outcome-row">
-          <div class="om-head">${x.p.name} · ${dd} · ${catMap[x.b.cat].label} (${fmtHM(x.b.dur)})${x.b.who?` — with ${x.b.who}`:''}${(!x.b.who && x.b.note)?` — ${x.b.note}`:''}</div>
+          <div class="om-head">${x.p.name} · ${dd} · ${catMap[x.b.cat].label} (${fmtHM(x.b.dur)})${x.b.site?` · ${x.b.site}`:''}${x.b.who?` — with ${x.b.who}`:''}${(!x.b.who && x.b.note)?` — ${x.b.note}`:''}</div>
           ${x.b.agenda?`<div class="om-agenda">Agenda: ${x.b.agenda}</div>`:''}
           <div class="om-out ${hasOut?'':'missing'}">${hasOut?'→ '+x.b.outcome:'→ No outcome recorded'}</div>
         </div>`;
@@ -1868,6 +1928,111 @@ function renderCEO(){
   document.getElementById('ceoFlags').innerHTML = flags.length
     ? flags.map(f=>`<div class="insight-row"><div class="insight-name">${f.name}</div><div class="insight-val" style="text-align:right;">${f.msg}</div></div>`).join('')
     : `<div class="empty-note">Nothing flagged. Clean week so far.</div>`;
+}
+
+// ================= CALENDAR VIEW (CEO) =================
+// Rows = hours, columns = the 7 days of the chosen week, cells = colored
+// activity blocks. Filters: manager, activity, site (from block notes).
+let calWeekOffset = 0;
+
+document.getElementById('calPrevWeek').addEventListener('click', ()=>{ calWeekOffset--; renderCal(); });
+document.getElementById('calNextWeek').addEventListener('click', ()=>{ calWeekOffset++; renderCal(); });
+
+function renderCal(){
+  if(!roster.length){
+    document.getElementById('calGrid').innerHTML = `<tr><td class="empty-note">Add your team first in the Team List tab.</td></tr>`;
+    document.getElementById('calSummary').innerHTML='';
+    return;
+  }
+  const dates = weekDates(calWeekOffset);
+  const mon = new Date(dates[0]), sun = new Date(dates[6]);
+  document.getElementById('calWeekLabel').textContent =
+    mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' – ' +
+    sun.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) +
+    (calWeekOffset===0?' (this week)':'');
+
+  // ---- Filters (selections survive re-render) ----
+  const pSel = document.getElementById('calPerson');
+  const cSel = document.getElementById('calCat');
+  const sSel = document.getElementById('calSite');
+  const pPrev = pSel.value, cPrev = cSel.value || 'all', sPrev = sSel.value || 'all';
+  pSel.innerHTML = roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  pSel.value = pPrev; if(!pSel.value) pSel.value = roster[0].id;
+  cSel.innerHTML = `<option value="all">All activities</option>` +
+    CATS.filter(c=>!c.hidden).map(c=>`<option value="${c.k}">${c.label}</option>`).join('');
+  cSel.value = cPrev; if(!cSel.value) cSel.value='all';
+
+  // Collect this manager's blocks for the week (with date attached)
+  let wkBlocks = [];
+  dates.forEach(d=>{
+    (getBlocks(pSel.value, d)||[]).forEach(b=>wkBlocks.push({date:d, b}));
+  });
+
+  // Site options: the structured site field; old logs without one group under "(not set)"
+  const siteVals = [...new Set(wkBlocks.map(x=>x.b.site||'').filter(Boolean))]
+    .sort((a,b)=>SITES.indexOf(a)-SITES.indexOf(b));
+  const hasLegacy = wkBlocks.some(x=>!x.b.site);
+  sSel.innerHTML = `<option value="all">All</option>` +
+    siteVals.map(n=>`<option value="${n}">${n}</option>`).join('') +
+    (hasLegacy ? `<option value="__none__">(not set — old logs)</option>` : '');
+  sSel.value = sPrev; if(!sSel.value) sSel.value='all';
+
+  // Apply activity + site filters
+  wkBlocks = wkBlocks.filter(x=>
+    (cSel.value==='all' || x.b.cat===cSel.value) &&
+    (sSel.value==='all' || (sSel.value==='__none__' ? !x.b.site : x.b.site===sSel.value)));
+
+  // ---- Hour range: from the data, defaulting to 8:00–20:00 ----
+  let minH = 8, maxH = 20;
+  wkBlocks.forEach(x=>{
+    minH = Math.min(minH, Math.floor(timeToMin(x.b.start)/60));
+    maxH = Math.max(maxH, Math.ceil(timeToMin(x.b.end)/60));
+  });
+  minH = Math.max(0, minH); maxH = Math.min(24, maxH);
+
+  // ---- Grid ----
+  const today = todayStr();
+  let html = `<tr><th></th>` + dates.map(d=>{
+    const dd = new Date(d);
+    return `<th class="${d===today?'today-col':''}">${DAY_LABELS[(dd.getDay()+6)%7]}<br>${dd.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</th>`;
+  }).join('') + `</tr>`;
+
+  for(let h=minH; h<maxH; h++){
+    html += `<tr><td class="cal-hour">${fmt12(pad(h)+':00')}</td>`;
+    dates.forEach(d=>{
+      const cellBlocks = wkBlocks.filter(x=>x.date===d &&
+        timeToMin(x.b.start) < (h+1)*60 && timeToMin(x.b.end) > h*60);
+      const chips = cellBlocks.map(x=>{
+        const c = catMap[x.b.cat] || {label:x.b.cat, color:'#888'};
+        const tip = [c.label+' '+fmt12(x.b.start)+'–'+fmt12(x.b.end),
+                     x.b.site?('Site: '+x.b.site):'',
+                     x.b.note?('Details: '+x.b.note):'',
+                     x.b.who?('With: '+x.b.who):'',
+                     x.b.agenda?('Agenda: '+x.b.agenda):'',
+                     x.b.outcome?('Outcome: '+x.b.outcome):''].filter(Boolean).join('\n');
+        return `<span class="cal-chip" style="background:${c.color};" title="${tip.replace(/"/g,'&quot;')}">${c.label}</span>`;
+      }).join('');
+      html += `<td class="${d===today?'today-col':''}">${chips}</td>`;
+    });
+    html += `</tr>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+
+  // ---- Summary: hours per activity for the filtered week ----
+  const sumMin = {};
+  wkBlocks.forEach(x=>{ sumMin[x.b.cat] = (sumMin[x.b.cat]||0) + x.b.dur; });
+  const totalMin = Object.values(sumMin).reduce((s,v)=>s+v,0);
+  document.getElementById('calSummary').innerHTML = totalMin>0
+    ? `<tr><th>Activity</th><th>Hours</th><th>Share</th></tr>` +
+      CATS.filter(c=>sumMin[c.k]>0)
+        .sort((a,b)=>(sumMin[b.k]||0)-(sumMin[a.k]||0))
+        .map(c=>`<tr>
+          <td class="pred-name"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.color};margin-right:6px;"></span>${c.label}</td>
+          <td>${fmtH(sumMin[c.k])}</td>
+          <td>${Math.round(sumMin[c.k]/totalMin*100)}%</td>
+        </tr>`).join('') +
+      `<tr><td class="pred-name"><strong>Total</strong></td><td><strong>${fmtH(totalMin)}</strong></td><td></td></tr>`
+    : `<tr><td class="empty-note">Nothing logged for this filter in this week.</td></tr>`;
 }
 
 // ================= INIT =================
