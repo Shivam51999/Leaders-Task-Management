@@ -457,15 +457,16 @@ table.grid-table td{
 .pi-btn.on-dropped{background:#F3E2DE;border-color:#B03A2E;color:#B03A2E;font-weight:700;}
 .plan-item.st-done .pi-text{}
 .plan-item.st-dropped .pi-text{text-decoration:line-through;opacity:.6;}
-/* ---- Duration quick-pick chips ---- */
-.dur-chips{display:flex;flex-wrap:wrap;gap:5px;}
-.dur-chip{font-size:12px;padding:8px 11px;border:1px solid var(--line,#ccc);background:transparent;border-radius:16px;cursor:pointer;font-weight:600;color:var(--ink-soft,#555);}
-.dur-chip.on{background:#2B4C5C;color:#fff;border-color:#2B4C5C;}
-/* ---- 12-hour time picker with AM/PM toggle ---- */
-.time-parts{display:flex;gap:5px;align-items:stretch;}
-.time-parts select{flex:1;min-width:0;}
-.tp-ampm{font-size:11px;padding:0 10px;border:1px solid var(--line,#ccc);background:transparent;border-radius:6px;cursor:pointer;font-weight:700;color:var(--grey,#888);}
-.tp-ampm.on{background:#2B4C5C;color:#fff;border-color:#2B4C5C;}
+/* ---- iPhone-style wheel time picker ---- */
+.wheel-group{position:relative;display:flex;height:120px;border:1px solid var(--line,#ccc);border-radius:12px;background:var(--paper,#fff);overflow:hidden;}
+.wheel-group::before,.wheel-group::after{content:'';position:absolute;left:0;right:0;height:40px;z-index:2;pointer-events:none;}
+.wheel-group::before{top:0;background:linear-gradient(to bottom, var(--paper,#fff), transparent);}
+.wheel-group::after{bottom:0;background:linear-gradient(to top, var(--paper,#fff), transparent);}
+.wheel{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;-ms-overflow-style:none;position:relative;z-index:1;}
+.wheel::-webkit-scrollbar{display:none;}
+.wheel-pad{height:42px;}
+.wheel-item{height:36px;line-height:36px;text-align:center;scroll-snap-align:center;font-size:15px;font-weight:600;color:var(--ink,#2B2B2B);cursor:pointer;}
+.wheel-band{position:absolute;top:42px;left:6px;right:6px;height:36px;border-radius:8px;background:rgba(43,76,92,.08);border:1px solid rgba(43,76,92,.18);pointer-events:none;z-index:0;}
 /* ---- Meeting detail sub-form (shown when Meeting / HO Meeting selected) ---- */
 .meet-box{display:none;margin-top:10px;padding:12px;border:1px dashed #2B4C5C;border-radius:8px;background:rgba(43,76,92,.05);}
 .meet-box.show{display:block;}
@@ -544,21 +545,21 @@ table.grid-table td{
       <div class="hint" style="margin-top:6px;">One activity per block. Did something else in between? End this block and add the next one.</div>
       <div class="row2" style="margin-top:8px;">
         <div><label>From (auto-set to your last block's end)</label>
-          <div class="time-parts" id="tpStart">
-            <select class="tp-h"></select><select class="tp-m"></select><button type="button" class="tp-ampm" data-v="AM">AM</button><button type="button" class="tp-ampm" data-v="PM">PM</button>
+          <div class="wheel-group" id="tpStart">
+            <div class="wheel" data-part="h"></div>
+            <div class="wheel" data-part="m"></div>
+            <div class="wheel" data-part="ap"></div>
+            <div class="wheel-band"></div>
           </div>
         </div>
-        <div><label>How long did it take?</label>
-          <div class="dur-chips" id="durChips"></div>
-        </div>
-      </div>
-      <div class="row2" id="customEndRow" style="display:none;">
-        <div><label>To (custom end time)</label>
-          <div class="time-parts" id="tpEnd">
-            <select class="tp-h"></select><select class="tp-m"></select><button type="button" class="tp-ampm" data-v="AM">AM</button><button type="button" class="tp-ampm" data-v="PM">PM</button>
+        <div><label>To</label>
+          <div class="wheel-group" id="tpEnd">
+            <div class="wheel" data-part="h"></div>
+            <div class="wheel" data-part="m"></div>
+            <div class="wheel" data-part="ap"></div>
+            <div class="wheel-band"></div>
           </div>
         </div>
-        <div></div>
       </div>
       <div class="hint" id="endPreview" style="margin-top:4px;"></div>
       <label>Site / Office</label>
@@ -1143,18 +1144,11 @@ function renderOutcomeInputs(){
 // ================= LOG TAB (managers) =================
 document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   const start = readTimeParts('tpStart');
-  let end = '';
-  if(customEnd) end = readTimeParts('tpEnd');
-  else if(selDur){
-    const endMin = timeToMin(start||'0:00') + selDur;
-    if(endMin >= 1440){ alert('This duration runs past midnight \u2014 use Custom with an end time.'); return; }
-    end = minToTime(endMin);
-  }
+  const end = readTimeParts('tpEnd');
   const note = document.getElementById('blkNote').value.trim();
   const cats = CATS.filter(c=>selectedCats.has(c.k)).map(c=>c.k); // keep display order
   if(!cats.length){ alert('Select at least one category.'); return; }
-  if(!start){ alert('Select the From time (hour + AM/PM).'); return; }
-  if(!end){ alert(customEnd ? 'Select the To time (hour + AM/PM).' : 'Tap how long it took \u2014 or Custom to set an end time.'); return; }
+  if(!start || !end){ alert('Set the From and To time.'); return; }
   const dur = timeToMin(end) - timeToMin(start);
   if(dur <= 0){ alert('End time must be after start time.'); return; }
   // Meetings and phone calls must carry accountability: with whom, agenda, outcome
@@ -1195,10 +1189,8 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
     blocks.push(b);
   });
   setTimeParts('tpStart', end);   // next block usually starts where this one ended
-  selDur = null; customEnd = false;
-  document.getElementById('customEndRow').style.display='none';
-  renderDurChips(); updateEndPreview();
-  resetTimeParts('tpEnd');
+  setTimeParts('tpEnd', end);
+  updateEndPreview();
   document.getElementById('blkNote').value='';
   document.getElementById('blkSite').value='';
   document.getElementById('blkWho').value='';
@@ -1255,83 +1247,88 @@ function loadExistingLog(){
 }
 document.getElementById('logDate').addEventListener('change', loadExistingLog);
 
-// ---- 12-hour time controls (hour + minute + AM/PM), stored internally as 24h HH:MM ----
+// ---- iPhone-style wheel time pickers, stored internally as 24h HH:MM ----
+const WHEEL_ITEM = 36, WHEEL_PAD = 42;
+const WHEEL_MINS = Array.from({length:12},(_,i)=>pad(i*5));
+
+function buildWheel(el, values){
+  el._values = values.map(String);
+  el.innerHTML = `<div class="wheel-pad"></div>` +
+    el._values.map(v=>`<div class="wheel-item" data-v="${v}">${v}</div>`).join('') +
+    `<div class="wheel-pad"></div>`;
+  // tap an item to snap to it (nice on desktop too)
+  el.querySelectorAll('.wheel-item').forEach((it,idx)=>it.addEventListener('click', ()=>{
+    el.scrollTo({top: idx*WHEEL_ITEM, behavior:'smooth'});
+  }));
+}
+function wheelGet(el){
+  const i = Math.round(el.scrollTop / WHEEL_ITEM);
+  return el._values[Math.max(0, Math.min(el._values.length-1, i))];
+}
+function wheelSet(el, v){
+  let i = el._values.indexOf(String(v));
+  if(i < 0){ // legacy odd minute etc. — insert in order and rebuild
+    const vals = [...el._values, String(v)].sort((a,b)=>(+a)-(+b));
+    buildWheel(el, vals);
+    i = el._values.indexOf(String(v));
+  }
+  el.scrollTop = i * WHEEL_ITEM;
+}
+
 function buildTimeParts(){
   ['tpStart','tpEnd'].forEach(id=>{
     const box = document.getElementById(id);
-    box.querySelector('.tp-h').innerHTML = `<option value="">Hr</option>` +
-      Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
-    box.querySelector('.tp-m').innerHTML =
-      Array.from({length:12},(_,i)=>{const m=pad(i*5);return `<option value="${m}">${m}</option>`;}).join('');
-    // default the toggle to the current half of the day
-    const nowPM = new Date().getHours() >= 12;
-    box.querySelectorAll('.tp-ampm').forEach(btn=>{
-      btn.classList.toggle('on', btn.dataset.v === (nowPM?'PM':'AM'));
-      btn.addEventListener('click', ()=>{
-        box.querySelectorAll('.tp-ampm').forEach(b=>b.classList.toggle('on', b===btn));
-      });
+    buildWheel(box.querySelector('[data-part="h"]'), Array.from({length:12},(_,i)=>i+1));
+    buildWheel(box.querySelector('[data-part="m"]'), WHEEL_MINS);
+    buildWheel(box.querySelector('[data-part="ap"]'), ['AM','PM']);
+    // live preview while the wheels settle
+    box.querySelectorAll('.wheel').forEach(w=>{
+      let t=null;
+      w.addEventListener('scroll', ()=>{ clearTimeout(t); t=setTimeout(updateEndPreview, 120); }, {passive:true});
     });
   });
 }
 buildTimeParts();
 
-// ---- Duration quick-picks: the common path is From (auto) + one duration tap ----
-const DUR_OPTS = [
-  {m:15,l:'15m'},{m:30,l:'30m'},{m:45,l:'45m'},{m:60,l:'1h'},{m:90,l:'1.5h'},
-  {m:120,l:'2h'},{m:180,l:'3h'},{m:240,l:'4h'},{m:0,l:'Custom'}
-];
-let selDur = null;        // minutes, or null
-let customEnd = false;    // true = use the To picker instead
+// Read one picker -> 'HH:MM' (24h). Wheels always hold a value.
+function readTimeParts(id){
+  const box = document.getElementById(id);
+  const h12 = parseInt(wheelGet(box.querySelector('[data-part="h"]')),10);
+  const m = wheelGet(box.querySelector('[data-part="m"]'));
+  const pm = wheelGet(box.querySelector('[data-part="ap"]')) === 'PM';
+  let h = h12;
+  if(pm && h!==12) h += 12;
+  if(!pm && h===12) h = 0;
+  return pad(h)+':'+m;
+}
+
+// Set a picker from 'HH:MM' (24h)
+function setTimeParts(id, hhmm){
+  const box = document.getElementById(id);
+  const [h24,m] = hhmm.split(':').map(Number);
+  const pm = h24>=12, h12 = (h24%12)||12;
+  wheelSet(box.querySelector('[data-part="h"]'), h12);
+  wheelSet(box.querySelector('[data-part="m"]'), pad(m));
+  wheelSet(box.querySelector('[data-part="ap"]'), pm?'PM':'AM');
+}
 
 function minToTime(m){ return pad(Math.floor(m/60))+':'+pad(m%60); }
 
-function renderDurChips(){
-  const box = document.getElementById('durChips');
-  box.innerHTML = DUR_OPTS.map(o=>
-    `<button type="button" class="dur-chip ${(o.m===0&&customEnd)||(o.m!==0&&selDur===o.m)?'on':''}" data-m="${o.m}">${o.l}</button>`
-  ).join('');
-  box.querySelectorAll('.dur-chip').forEach(btn=>btn.addEventListener('click', ()=>{
-    const mv = +btn.dataset.m;
-    if(mv===0){ customEnd = !customEnd; if(customEnd) selDur = null; }
-    else { selDur = (selDur===mv? null : mv); customEnd = false; }
-    document.getElementById('customEndRow').style.display = customEnd ? '' : 'none';
-    renderDurChips(); updateEndPreview();
-  }));
-}
-renderDurChips();
-
+// Live line under the pickers: "Block: 9:00 am → 10:30 am (1h 30m)"
 function updateEndPreview(){
   const el = document.getElementById('endPreview');
-  const start = readTimeParts('tpStart');
-  if(start && selDur){
-    const endMin = timeToMin(start) + selDur;
-    el.textContent = endMin < 1440 ? `Block: ${fmt12(start)} \u2192 ${fmt12(minToTime(endMin))}` : '';
-  } else el.textContent = '';
-}
-// live preview when the From controls change
-document.querySelectorAll('#tpStart select').forEach(x=>x.addEventListener('change', updateEndPreview));
-document.querySelectorAll('#tpStart .tp-ampm').forEach(x=>x.addEventListener('click', updateEndPreview));
-
-// Set a time-parts control from 'HH:MM' (24h). Legacy odd minutes get a temp option.
-function setTimeParts(id, hhmm){
-  const box = document.getElementById(id);
-  if(!hhmm){ box.querySelector('.tp-h').value=''; box.querySelector('.tp-m').value='00'; return; }
-  const [h24,m] = hhmm.split(':').map(Number);
-  const pm = h24>=12, h12 = (h24%12)||12;
-  box.querySelector('.tp-h').value = String(h12);
-  const mSel = box.querySelector('.tp-m'), mStr = pad(m);
-  if(![...mSel.options].some(o=>o.value===mStr)){
-    const o=document.createElement('option'); o.value=mStr; o.textContent=mStr; mSel.appendChild(o);
-  }
-  mSel.value = mStr;
-  box.querySelectorAll('.tp-ampm').forEach(b=>b.classList.toggle('on', b.dataset.v===(pm?'PM':'AM')));
+  const start = readTimeParts('tpStart'), end = readTimeParts('tpEnd');
+  const dur = timeToMin(end) - timeToMin(start);
+  el.textContent = dur > 0 ? `Block: ${fmt12(start)} \u2192 ${fmt12(end)} (${fmtHM(dur)})` : '';
 }
 
-// Prefill From with the end of the latest block already logged (else 9:00 AM)
+// Prefill From with the end of the latest block already logged (else 9:00 AM).
+// To starts at the same point, so the manager only scrolls the To wheels.
 function prefillStart(){
   let latest = '';
   blocks.forEach(b=>{ if(!latest || timeToMin(b.end)>timeToMin(latest)) latest=b.end; });
   setTimeParts('tpStart', latest || '09:00');
+  setTimeParts('tpEnd', latest || '09:00');
   updateEndPreview();
 }
 
