@@ -1332,24 +1332,6 @@ function prefillStart(){
   updateEndPreview();
 }
 
-// Read one control -> 'HH:MM' (24h), or '' if the hour isn't chosen yet
-function readTimeParts(id){
-  const box = document.getElementById(id);
-  const h12 = box.querySelector('.tp-h').value;
-  if(!h12) return '';
-  const m = box.querySelector('.tp-m').value || '00';
-  const pm = box.querySelector('.tp-ampm.on').dataset.v === 'PM';
-  let h = parseInt(h12,10);
-  if(pm && h!==12) h += 12;
-  if(!pm && h===12) h = 0;
-  return pad(h)+':'+m;
-}
-function resetTimeParts(id){
-  const box = document.getElementById(id);
-  box.querySelector('.tp-h').value='';
-  box.querySelector('.tp-m').value='00';
-}
-
 // ================= MY WEEK PLANNER (managers) =================
 let planWeekOffset = 0;   // 0 = this week, +1 = next week (plan ahead), -1 = review last week
 let planItems = [];       // working copy for the week being viewed
