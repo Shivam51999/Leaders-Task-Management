@@ -457,6 +457,11 @@ table.grid-table td{
 .pi-btn.on-dropped{background:#F3E2DE;border-color:#B03A2E;color:#B03A2E;font-weight:700;}
 .plan-item.st-done .pi-text{}
 .plan-item.st-dropped .pi-text{text-decoration:line-through;opacity:.6;}
+/* ---- 12-hour time picker with AM/PM toggle ---- */
+.time-parts{display:flex;gap:5px;align-items:stretch;}
+.time-parts select{flex:1;min-width:0;}
+.tp-ampm{font-size:11px;padding:0 10px;border:1px solid var(--line,#ccc);background:transparent;border-radius:6px;cursor:pointer;font-weight:700;color:var(--grey,#888);}
+.tp-ampm.on{background:#2B4C5C;color:#fff;border-color:#2B4C5C;}
 /* ---- Meeting detail sub-form (shown when Meeting / HO Meeting selected) ---- */
 .meet-box{display:none;margin-top:10px;padding:12px;border:1px dashed #2B4C5C;border-radius:8px;background:rgba(43,76,92,.05);}
 .meet-box.show{display:block;}
@@ -532,10 +537,18 @@ table.grid-table td{
 
       <label>Add a block of time — tap one or more categories</label>
       <div class="chips" id="catChips"></div>
-      <div class="hint" style="margin-top:6px;">Did more than one thing in the same slot? Tap several categories — the time is split equally between them.</div>
+      <div class="hint" style="margin-top:6px;">One activity per block. Did something else in between? End this block and add the next one.</div>
       <div class="row2" style="margin-top:8px;">
-        <div><label>From</label><input type="time" id="blkStart"></div>
-        <div><label>To</label><input type="time" id="blkEnd"></div>
+        <div><label>From</label>
+          <div class="time-parts" id="tpStart">
+            <select class="tp-h"></select><select class="tp-m"></select><button type="button" class="tp-ampm" data-v="AM">AM</button><button type="button" class="tp-ampm" data-v="PM">PM</button>
+          </div>
+        </div>
+        <div><label>To</label>
+          <div class="time-parts" id="tpEnd">
+            <select class="tp-h"></select><select class="tp-m"></select><button type="button" class="tp-ampm" data-v="AM">AM</button><button type="button" class="tp-ampm" data-v="PM">PM</button>
+          </div>
+        </div>
       </div>
       <label>Site / Office</label>
       <select id="blkSite"><option value="">— Select site / office —</option></select>
@@ -894,7 +907,7 @@ const ACC_CATS = new Set(['meeting','ho','call','approval','site','culture','des
 const SITES = ['HO / Office','Mithila','Miraya','Mithila-2','Momento','Starview','Shyni','Niyoshi Park','Melizma','Aikyam','Marvel','Other'];
 
 let roster = [];
-let selectedCats = new Set(['meeting']); // multi-select: several categories can share one time slot
+let selectedCats = new Set(['meeting']); // single-select: one activity per time block
 let blocks = [];
 let weekOffset = 0;
 
@@ -1089,7 +1102,8 @@ function renderChips(){
   }).join('');
   box.querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click', e=>{
     const k = e.currentTarget.dataset.k;
-    if(selectedCats.has(k)) selectedCats.delete(k); else selectedCats.add(k);
+    if(selectedCats.has(k)){ selectedCats.clear(); }       // tap again to deselect
+    else { selectedCats.clear(); selectedCats.add(k); }    // only one activity per block
     renderChips();
   }));
   // Meeting / Phone Call selected -> show the with-whom / agenda / outcome fields
@@ -1117,12 +1131,12 @@ function renderOutcomeInputs(){
 
 // ================= LOG TAB (managers) =================
 document.getElementById('addBlockBtn').addEventListener('click', ()=>{
-  const start = document.getElementById('blkStart').value;
-  const end = document.getElementById('blkEnd').value;
+  const start = readTimeParts('tpStart');
+  const end = readTimeParts('tpEnd');
   const note = document.getElementById('blkNote').value.trim();
   const cats = CATS.filter(c=>selectedCats.has(c.k)).map(c=>c.k); // keep display order
   if(!cats.length){ alert('Select at least one category.'); return; }
-  if(!start || !end){ alert('Enter start and end time.'); return; }
+  if(!start || !end){ alert('Select the From and To time (hour + AM/PM).'); return; }
   const dur = timeToMin(end) - timeToMin(start);
   if(dur <= 0){ alert('End time must be after start time.'); return; }
   // Meetings and phone calls must carry accountability: with whom, agenda, outcome
@@ -1162,8 +1176,8 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
     if(catOutcomes[k]) b.outcome = catOutcomes[k];
     blocks.push(b);
   });
-  document.getElementById('blkStart').value='';
-  document.getElementById('blkEnd').value='';
+  resetTimeParts('tpStart');
+  resetTimeParts('tpEnd');
   document.getElementById('blkNote').value='';
   document.getElementById('blkSite').value='';
   document.getElementById('blkWho').value='';
@@ -1218,6 +1232,44 @@ function loadExistingLog(){
   renderBlocks();
 }
 document.getElementById('logDate').addEventListener('change', loadExistingLog);
+
+// ---- 12-hour time controls (hour + minute + AM/PM), stored internally as 24h HH:MM ----
+function buildTimeParts(){
+  ['tpStart','tpEnd'].forEach(id=>{
+    const box = document.getElementById(id);
+    box.querySelector('.tp-h').innerHTML = `<option value="">Hr</option>` +
+      Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+    box.querySelector('.tp-m').innerHTML =
+      Array.from({length:12},(_,i)=>{const m=pad(i*5);return `<option value="${m}">${m}</option>`;}).join('');
+    // default the toggle to the current half of the day
+    const nowPM = new Date().getHours() >= 12;
+    box.querySelectorAll('.tp-ampm').forEach(btn=>{
+      btn.classList.toggle('on', btn.dataset.v === (nowPM?'PM':'AM'));
+      btn.addEventListener('click', ()=>{
+        box.querySelectorAll('.tp-ampm').forEach(b=>b.classList.toggle('on', b===btn));
+      });
+    });
+  });
+}
+buildTimeParts();
+
+// Read one control -> 'HH:MM' (24h), or '' if the hour isn't chosen yet
+function readTimeParts(id){
+  const box = document.getElementById(id);
+  const h12 = box.querySelector('.tp-h').value;
+  if(!h12) return '';
+  const m = box.querySelector('.tp-m').value || '00';
+  const pm = box.querySelector('.tp-ampm.on').dataset.v === 'PM';
+  let h = parseInt(h12,10);
+  if(pm && h!==12) h += 12;
+  if(!pm && h===12) h = 0;
+  return pad(h)+':'+m;
+}
+function resetTimeParts(id){
+  const box = document.getElementById(id);
+  box.querySelector('.tp-h').value='';
+  box.querySelector('.tp-m').value='00';
+}
 
 // ================= MY WEEK PLANNER (managers) =================
 let planWeekOffset = 0;   // 0 = this week, +1 = next week (plan ahead), -1 = review last week
