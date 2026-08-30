@@ -457,6 +457,10 @@ table.grid-table td{
 .pi-btn.on-dropped{background:#F3E2DE;border-color:#B03A2E;color:#B03A2E;font-weight:700;}
 .plan-item.st-done .pi-text{}
 .plan-item.st-dropped .pi-text{text-decoration:line-through;opacity:.6;}
+/* ---- Duration quick-pick chips ---- */
+.dur-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.dur-chip{font-size:12px;padding:8px 11px;border:1px solid var(--line,#ccc);background:transparent;border-radius:16px;cursor:pointer;font-weight:600;color:var(--ink-soft,#555);}
+.dur-chip.on{background:#2B4C5C;color:#fff;border-color:#2B4C5C;}
 /* ---- 12-hour time picker with AM/PM toggle ---- */
 .time-parts{display:flex;gap:5px;align-items:stretch;}
 .time-parts select{flex:1;min-width:0;}
@@ -539,17 +543,24 @@ table.grid-table td{
       <div class="chips" id="catChips"></div>
       <div class="hint" style="margin-top:6px;">One activity per block. Did something else in between? End this block and add the next one.</div>
       <div class="row2" style="margin-top:8px;">
-        <div><label>From</label>
+        <div><label>From (auto-set to your last block's end)</label>
           <div class="time-parts" id="tpStart">
             <select class="tp-h"></select><select class="tp-m"></select><button type="button" class="tp-ampm" data-v="AM">AM</button><button type="button" class="tp-ampm" data-v="PM">PM</button>
           </div>
         </div>
-        <div><label>To</label>
+        <div><label>How long did it take?</label>
+          <div class="dur-chips" id="durChips"></div>
+        </div>
+      </div>
+      <div class="row2" id="customEndRow" style="display:none;">
+        <div><label>To (custom end time)</label>
           <div class="time-parts" id="tpEnd">
             <select class="tp-h"></select><select class="tp-m"></select><button type="button" class="tp-ampm" data-v="AM">AM</button><button type="button" class="tp-ampm" data-v="PM">PM</button>
           </div>
         </div>
+        <div></div>
       </div>
+      <div class="hint" id="endPreview" style="margin-top:4px;"></div>
       <label>Site / Office</label>
       <select id="blkSite"><option value="">— Select site / office —</option></select>
       <label>Details (party, item — optional; required if site is "Other")</label>
@@ -1132,11 +1143,18 @@ function renderOutcomeInputs(){
 // ================= LOG TAB (managers) =================
 document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   const start = readTimeParts('tpStart');
-  const end = readTimeParts('tpEnd');
+  let end = '';
+  if(customEnd) end = readTimeParts('tpEnd');
+  else if(selDur){
+    const endMin = timeToMin(start||'0:00') + selDur;
+    if(endMin >= 1440){ alert('This duration runs past midnight \u2014 use Custom with an end time.'); return; }
+    end = minToTime(endMin);
+  }
   const note = document.getElementById('blkNote').value.trim();
   const cats = CATS.filter(c=>selectedCats.has(c.k)).map(c=>c.k); // keep display order
   if(!cats.length){ alert('Select at least one category.'); return; }
-  if(!start || !end){ alert('Select the From and To time (hour + AM/PM).'); return; }
+  if(!start){ alert('Select the From time (hour + AM/PM).'); return; }
+  if(!end){ alert(customEnd ? 'Select the To time (hour + AM/PM).' : 'Tap how long it took \u2014 or Custom to set an end time.'); return; }
   const dur = timeToMin(end) - timeToMin(start);
   if(dur <= 0){ alert('End time must be after start time.'); return; }
   // Meetings and phone calls must carry accountability: with whom, agenda, outcome
@@ -1176,7 +1194,10 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
     if(catOutcomes[k]) b.outcome = catOutcomes[k];
     blocks.push(b);
   });
-  resetTimeParts('tpStart');
+  setTimeParts('tpStart', end);   // next block usually starts where this one ended
+  selDur = null; customEnd = false;
+  document.getElementById('customEndRow').style.display='none';
+  renderDurChips(); updateEndPreview();
   resetTimeParts('tpEnd');
   document.getElementById('blkNote').value='';
   document.getElementById('blkSite').value='';
@@ -1230,6 +1251,7 @@ function loadExistingLog(){
   const date = document.getElementById('logDate').value;
   blocks = (logsIndex[auth.person.id + '|' + date] || []).slice();
   renderBlocks();
+  prefillStart();
 }
 document.getElementById('logDate').addEventListener('change', loadExistingLog);
 
@@ -1252,6 +1274,66 @@ function buildTimeParts(){
   });
 }
 buildTimeParts();
+
+// ---- Duration quick-picks: the common path is From (auto) + one duration tap ----
+const DUR_OPTS = [
+  {m:15,l:'15m'},{m:30,l:'30m'},{m:45,l:'45m'},{m:60,l:'1h'},{m:90,l:'1.5h'},
+  {m:120,l:'2h'},{m:180,l:'3h'},{m:240,l:'4h'},{m:0,l:'Custom'}
+];
+let selDur = null;        // minutes, or null
+let customEnd = false;    // true = use the To picker instead
+
+function minToTime(m){ return pad(Math.floor(m/60))+':'+pad(m%60); }
+
+function renderDurChips(){
+  const box = document.getElementById('durChips');
+  box.innerHTML = DUR_OPTS.map(o=>
+    `<button type="button" class="dur-chip ${(o.m===0&&customEnd)||(o.m!==0&&selDur===o.m)?'on':''}" data-m="${o.m}">${o.l}</button>`
+  ).join('');
+  box.querySelectorAll('.dur-chip').forEach(btn=>btn.addEventListener('click', ()=>{
+    const mv = +btn.dataset.m;
+    if(mv===0){ customEnd = !customEnd; if(customEnd) selDur = null; }
+    else { selDur = (selDur===mv? null : mv); customEnd = false; }
+    document.getElementById('customEndRow').style.display = customEnd ? '' : 'none';
+    renderDurChips(); updateEndPreview();
+  }));
+}
+renderDurChips();
+
+function updateEndPreview(){
+  const el = document.getElementById('endPreview');
+  const start = readTimeParts('tpStart');
+  if(start && selDur){
+    const endMin = timeToMin(start) + selDur;
+    el.textContent = endMin < 1440 ? `Block: ${fmt12(start)} \u2192 ${fmt12(minToTime(endMin))}` : '';
+  } else el.textContent = '';
+}
+// live preview when the From controls change
+document.querySelectorAll('#tpStart select').forEach(x=>x.addEventListener('change', updateEndPreview));
+document.querySelectorAll('#tpStart .tp-ampm').forEach(x=>x.addEventListener('click', updateEndPreview));
+
+// Set a time-parts control from 'HH:MM' (24h). Legacy odd minutes get a temp option.
+function setTimeParts(id, hhmm){
+  const box = document.getElementById(id);
+  if(!hhmm){ box.querySelector('.tp-h').value=''; box.querySelector('.tp-m').value='00'; return; }
+  const [h24,m] = hhmm.split(':').map(Number);
+  const pm = h24>=12, h12 = (h24%12)||12;
+  box.querySelector('.tp-h').value = String(h12);
+  const mSel = box.querySelector('.tp-m'), mStr = pad(m);
+  if(![...mSel.options].some(o=>o.value===mStr)){
+    const o=document.createElement('option'); o.value=mStr; o.textContent=mStr; mSel.appendChild(o);
+  }
+  mSel.value = mStr;
+  box.querySelectorAll('.tp-ampm').forEach(b=>b.classList.toggle('on', b.dataset.v===(pm?'PM':'AM')));
+}
+
+// Prefill From with the end of the latest block already logged (else 9:00 AM)
+function prefillStart(){
+  let latest = '';
+  blocks.forEach(b=>{ if(!latest || timeToMin(b.end)>timeToMin(latest)) latest=b.end; });
+  setTimeParts('tpStart', latest || '09:00');
+  updateEndPreview();
+}
 
 // Read one control -> 'HH:MM' (24h), or '' if the hour isn't chosen yet
 function readTimeParts(id){
