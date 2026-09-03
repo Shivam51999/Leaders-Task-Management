@@ -890,6 +890,7 @@ const CATS = [
   {k:'travel', label:'Travel Time', color: '#3E7C7B'},
   {k:'lunch', label:'Lunch', color: '#8A6B3D'},
   {k:'tea', label:'Tea Break', color: '#B58A8A', hidden:true},   // legacy: kept so old logs still render
+  {k:'training', label:'Training', color: '#B0722E'},
   {k:'other', label:'Other', color: '#8A8378'}
 ];
 const catMap = Object.fromEntries(CATS.map(c=>[c.k,c]));
@@ -908,15 +909,16 @@ const OUTCOME_CATS = {
   site:     {q:'Site Visit — what did you find & what did you instruct?', ph:'e.g. Tower B slab 4 days behind — told PM to add night shift, review Fri'},
   culture:  {q:'Culture/Event — what did it produce?', ph:'e.g. Skyview possession event, 40 families — 3 referral leads collected'},
   desk:     {q:'Desk Work — what got completed or moved forward?', ph:'e.g. FY27 CP incentive grid finalised and mailed to RP'},
-  other:    {q:'Other — what was it & what came of it?', ph:'e.g. Bank RM visit for Myra account — document list received'}
+  other:    {q:'Other — what was it & what came of it?', ph:'e.g. Bank RM visit for Myra account — document list received'},
+  training: {q:'Training — what was covered & what can the team now do?', ph:'e.g. CRM module training for 6 CP staff — all can now raise token requests independently'}
 };
 // All categories where an outcome is expected (for CEO accountability math).
 // 'ho' stays for legacy data already saved in the Sheet.
-const ACC_CATS = new Set(['meeting','ho','call','approval','site','culture','desk','other']);
+const ACC_CATS = new Set(['meeting','ho','call','approval','site','culture','desk','training','other']);
 
 // Site / office list for the "Site" dropdown. Edit this list as projects
 // launch or close — 'Other' must stay last.
-const SITES = ['HO / Office','Mithila','Miraya','Mithila-2','Momento','Starview','Shyni','Niyoshi Park','Melizma','Aikyam','Marvel','Other'];
+const SITES = ['HO / Office','Mithila','Miraya','Mithila-2','Momento','Starview','Shyni','Niyoshi Park','Melizma','Aikyam','Marvel','Midas','Old Project','Other'];
 
 let roster = [];
 let selectedCats = new Set(['meeting']); // single-select: one activity per time block
