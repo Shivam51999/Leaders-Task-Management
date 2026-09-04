@@ -489,6 +489,34 @@ table.grid-table td{
 }
 .tbar-fill{height:100%;}
 .delta{font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; margin-left:6px;}
+
+/* ==== v2.3 PRODUCTIVITY ENGINE ==== */
+.ins-card{border-radius:0 7px 7px 0;padding:9px 12px;margin-bottom:8px;background:rgba(0,0,0,.02);}
+.ins-card .ins-t{font-weight:700;font-size:13px;margin-bottom:2px;}
+.ins-card .ins-b{font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+.ins-good{border-left:4px solid #4B7355;}
+.ins-watch{border-left:4px solid #C9A227;}
+.ins-warn{border-left:4px solid #B03A2E;}
+.spot-hero{border:1.5px solid #C9A227;background:rgba(201,162,39,.08);border-radius:9px;padding:13px;margin-bottom:12px;}
+.spot-hero .sh-eye{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:#8B6B1A;margin-bottom:4px;}
+.spot-hero .sh-name{font-family:'Fraunces',serif;font-size:17px;font-weight:700;}
+.spot-hero .sh-score{font-family:'IBM Plex Mono',monospace;font-size:14px;color:#8B6B1A;}
+.spot-hero .sh-why{font-size:12px;color:var(--ink-soft);margin-top:3px;line-height:1.5;}
+.spot-imp{border:1.5px solid #4B7355;background:rgba(75,115,85,.07);border-radius:9px;padding:11px 13px;margin-bottom:12px;}
+.spot-imp .si-eye{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:#4B7355;margin-bottom:4px;}
+.move-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:7px;background:var(--paper);}
+.move-row .mv-txt{font-size:12.5px;line-height:1.45;}
+.move-row .mv-txt b{font-size:13px;}
+.move-row .mv-sub{font-size:11px;color:var(--grey);margin-top:2px;}
+.move-gain{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:#4B7355;background:#E4EBE1;border-radius:7px;padding:6px 9px;min-width:52px;text-align:center;}
+.move-gain.zero{color:var(--grey);background:var(--paper-dark);}
+.copy-grid{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+.copy-grid th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--grey);text-transform:uppercase;padding:5px 4px;border-bottom:1.5px solid var(--ink);}
+.copy-grid td{padding:7px 4px;border-bottom:1px solid var(--line);}
+.copy-grid tr:last-child td{border-bottom:none;}
+.copy-diff{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+.copy-more{color:#B03A2E;}
+.copy-less{color:#4B7355;}
 </style>
 </head>
 <body>
@@ -617,10 +645,32 @@ table.grid-table td{
     <div class="card">
       <h2>My Scorecard</h2>
       <div class="kpi-strip" id="myKpis"></div>
-      <span class="eyebrow">My efficiency — last 6 weeks + projection</span>
+      <span class="eyebrow">My productivity score — last 6 weeks + projection</span>
       <div class="chart-box"><canvas id="myTrendChart" height="180"></canvas></div>
-      <div class="hint">Efficiency % = productive time (Meeting + Phone Call + Approvals + Culture/Event + Site Visit + Desk Work + Travel) ÷ total logged time. Lunch and Other count as non-productive. Discipline % = days you submitted a report. Dashed segment is a projection from your recent trend.</div>
+      <div class="hint" id="myStatsHint">Productivity Score = plan delivered (50%) + outcomes recorded (30%) + reporting discipline (20%). Hours logged are deliberately excluded. Dashed segment is a projection from your recent trend.</div>
     </div>
+
+    <!-- v2.3: what would actually move the number -->
+    <div class="card" id="myMoveCard">
+      <h2>Move My Score</h2>
+      <div class="hint" style="margin-top:0;">Every line below is worked out from your own week. The number on the right is the exact points you gain by doing it — no guessing.</div>
+      <div id="myMoveBody" style="margin-top:10px;"></div>
+      <span class="eyebrow" style="display:block;margin-top:16px;">Copy the leader — your time mix vs this week's top scorer</span>
+      <div id="myCopyBody"></div>
+    </div>
+
+    <div class="card" id="myFocusCard">
+      <h2>Where To Focus</h2>
+      <div class="hint" style="margin-top:0;">Measured against your own strongest weeks, not against anyone else.</div>
+      <div id="myFocusBody" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card" id="mySpotCard">
+      <h2>This Week's Spotlight</h2>
+      <div class="hint" style="margin-top:0;">Ranked on what was planned and delivered, outcomes recorded, and days reported. Hours logged are not counted, so nobody climbs by sitting in more meetings.</div>
+      <div id="mySpotBody" style="margin-top:10px;"></div>
+    </div>
+
     <div class="card">
       <span class="eyebrow">My time split — this week</span>
       <div class="donut-wrap">
@@ -693,6 +743,13 @@ table.grid-table td{
 
   <!-- CEO VIEW TAB -->
   <div id="tab-ceo" style="display:none;">
+    <!-- v2.3: leaderboard sits first so it is the first thing the CEO sees -->
+    <div class="card" id="ceoSpotCard">
+      <h2>Productivity Leaderboard</h2>
+      <div class="hint" style="margin-top:0;">Score = plan delivered 50% + outcomes recorded 30% + reporting discipline 20%. Hours logged are excluded on purpose, so nobody climbs by sitting in more meetings.</div>
+      <div id="ceoSpotBody" style="margin-top:10px;"></div>
+    </div>
+
     <div class="card">
       <h2>CEO Command View — This Week</h2>
       <div class="kpi-strip" id="ceoKpis"></div>
@@ -1742,85 +1799,6 @@ function renderDashboard(){
 document.getElementById('dashView').addEventListener('change', renderDashboard);
 document.getElementById('dashWeeks').addEventListener('change', renderDashboard);
 
-// ================= MY STATS (manager) =================
-function renderMyStats(){
-  const me = auth.person.id;
-  const thisWk = weekStats([me], weekDates(0));
-  const elapsed = daysElapsedThisWeek();
-
-  // 4-week discipline: days reported / 28 (or elapsed days for current week)
-  let dReported=0, dPossible=0;
-  for(let w=-3; w<=0; w++){
-    const dts = weekDates(w);
-    const lim = (w===0) ? elapsed : 7;
-    for(let i=0;i<lim;i++){
-      dPossible++;
-      const b = getBlocks(me, dts[i]);
-      if(b && b.length) dReported++;
-    }
-  }
-  const discipline = dPossible ? Math.round(dReported/dPossible*100) : 0;
-  const effNow = thisWk.totalMin>0 ? Math.round((thisWk.totalMin - thisWk.idleMin)/thisWk.totalMin*100) : null;
-  const avgDay = thisWk.submittedCount>0 ? (thisWk.totalMin/60/thisWk.submittedCount).toFixed(1) : '—';
-
-  document.getElementById('myKpis').innerHTML = `
-    <div class="kpi"><div class="num">${fmtH(thisWk.totalMin)}</div><div class="lbl">Hours This Week</div></div>
-    <div class="kpi"><div class="num">${avgDay}${avgDay!=='—'?'h':''}</div><div class="lbl">Avg / Day</div></div>
-    <div class="kpi"><div class="num">${effNow!==null?effNow+'%':'—'}</div><div class="lbl">Efficiency</div></div>
-    <div class="kpi"><div class="num">${discipline}%</div><div class="lbl">Discipline (4 wk)</div></div>
-  `;
-
-  // Own 6-week trend + projection
-  const history = buildWeeklyHistory([me], 6);
-  const actualPts = history.map((h,i)=>({x:i, y:h.eff})).filter(p=>p.y!==null);
-  const reg = linRegress(actualPts);
-  const labels = history.map(h=>h.label);
-  let projLabels=[], projValues=[];
-  if(reg && actualPts.length>=2){
-    const lastX = actualPts[actualPts.length-1].x;
-    for(let k=1;k<=2;k++){
-      const x = lastX+k;
-      const y = Math.max(0, Math.min(100, Math.round(reg.slope*x + reg.intercept)));
-      const d = new Date(getMonday(x - (history.length-1)));
-      projLabels.push(d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}));
-      projValues.push(y);
-    }
-  }
-  const allLabels=[...labels,...projLabels];
-  const actualData=[...history.map(h=>h.eff), ...projLabels.map(()=>null)];
-  const projData=[...history.map(()=>null)];
-  if(projValues.length){
-    projData[history.length-1]=history[history.length-1].eff;
-    projValues.forEach(v=>projData.push(v));
-  }
-  const ctx = document.getElementById('myTrendChart').getContext('2d');
-  if(myTrendInst) myTrendInst.destroy();
-  myTrendInst = new Chart(ctx, {
-    type:'line',
-    data:{labels:allLabels, datasets:[
-      {label:'Actual', data:actualData, borderColor:'#2B4C5C', backgroundColor:'#2B4C5C', tension:0.25, spanGaps:true, pointRadius:4},
-      {label:'Projected', data:projData, borderColor:'#A9552E', borderDash:[5,4], backgroundColor:'#A9552E', tension:0.25, spanGaps:true, pointRadius:4}
-    ]},
-    options:{responsive:true, plugins:{legend:{labels:{font:{size:10}}}}, scales:{y:{min:0,max:100,ticks:{font:{size:9}}}, x:{ticks:{font:{size:9}}}}}
-  });
-
-  // Own donut, this week
-  const donutCtx = document.getElementById('myDonutChart').getContext('2d');
-  if(myDonutInst) myDonutInst.destroy();
-  const legendBox = document.getElementById('myDonutLegend');
-  if(thisWk.totalMin>0){
-    const dCats = CATS.filter(c=>thisWk.catMin[c.k]>0);
-    myDonutInst = new Chart(donutCtx, {
-      type:'doughnut',
-      data:{labels:dCats.map(c=>c.label), datasets:[{data:dCats.map(c=>thisWk.catMin[c.k]), backgroundColor:dCats.map(c=>c.color), borderWidth:1}]},
-      options:{plugins:{legend:{display:false}}, cutout:'62%'}
-    });
-    legendBox.innerHTML = dCats.map(c=>`<span><i style="background:${c.color}"></i>${c.label} — ${(thisWk.catMin[c.k]/60).toFixed(1)}h</span>`).join('');
-  } else {
-    legendBox.innerHTML = `<div class="empty-note">Nothing logged this week yet. Fill "My Day" first.</div>`;
-  }
-}
-
 // ================= CEO VIEW =================
 function renderCEO(){
   if(!roster.length){
@@ -2263,6 +2241,476 @@ function renderCal(){
       `<tr><td class="pred-name"><strong>Total</strong></td><td><strong>${fmtH(totalMin)}</strong></td><td></td></tr>`
     : `<tr><td class="empty-note">Nothing logged for this filter in this range.</td></tr>`;
 }
+
+// ============================================================================
+// ================= PRODUCTIVITY & FOCUS ENGINE (v2.3) =======================
+// Replaces the old "Efficiency %" — which was (time that isn't lunch) ÷ total,
+// and so could never fall below about 90% for anybody. Everything below is
+// built from data the tool already collects: plans, outcomes, and logged days.
+// ============================================================================
+
+// ---- TUNING: these lines are the whole policy. Change them, nothing else. ---
+const MIN_OUTCOME_CHARS = 15;   // "done" / "ok" is not an outcome
+const MIN_PLAN_ITEMS    = 3;    // planning 2 easy items cannot score 100%
+const SCORE_W = { exec: 0.50, outcome: 0.30, discipline: 0.20 }; // hours excluded on purpose
+const SPOTLIGHT_MIN_MIN = 240;  // need 4h+ logged in the week to be eligible
+// What one hour of each activity is worth. Travel is real work but buys
+// nothing — it is the number a leader can actually shrink by batching visits.
+const LEVERAGE = {
+  site:1.00, approval:1.00, training:0.90, desk:0.80, call:0.70,
+  meeting:0.60, ho:0.60, culture:0.60, other:0.20, travel:0.00
+};
+const BREAK_CATS = new Set(['lunch','tea']); // not work — kept out of every ratio
+
+// ---- Board data: aggregate numbers for everyone. No outcome text, no
+// agendas, no "with whom", no notes — so a manager can see that a colleague
+// scored 82 without being able to read what that colleague did.
+let boardDays = {};    // 'pid|date'      -> {cats,n,acc,out,maxDur,accMin}
+let boardPlans = {};   // 'pid|weekStart' -> {planned,done}
+let boardPeople = [];  // [{id,name,role,type}]
+
+async function refreshBoard(){
+  if(!auth) return false;
+  try{
+    const res = await fetch(API_URL + '?board=1&id=' + encodeURIComponent(auth.loginId) +
+      '&pin=' + encodeURIComponent(auth.pin) + '&t=' + Date.now(), {cache:'no-store'});
+    const data = await res.json();
+    if(!data.ok) return false;
+    boardDays = {}; boardPlans = {};
+    (data.days  || []).forEach(x=>{ boardDays[x.pid + '|' + x.d]  = x; });
+    (data.plans || []).forEach(x=>{ boardPlans[x.pid + '|' + x.ws] = x; });
+    boardPeople = data.people || [];
+    return true;
+  }catch(e){ return false; }
+}
+
+// ---- One person, one week: every honest number we can build.
+function personWeek(pid, offset){
+  const dates = weekDates(offset);
+  const elapsed = offset === 0 ? daysElapsedThisWeek() : 7;
+  const live = dates.slice(0, elapsed);
+  let catMin = {}, totalMin = 0, workMin = 0, levSum = 0;
+  let accTot = 0, outTot = 0, accMin = 0, blocks = 0, maxDur = 0, days = 0;
+
+  live.forEach(d=>{
+    const r = boardDays[pid + '|' + d];
+    if(!r) return;
+    days++;
+    Object.keys(r.cats || {}).forEach(k=>{
+      const m = r.cats[k] || 0;
+      catMin[k] = (catMin[k] || 0) + m;
+      totalMin += m;
+      if(!BREAK_CATS.has(k)){
+        workMin += m;
+        levSum += (LEVERAGE[k] !== undefined ? LEVERAGE[k] : 0.5) * m;
+      }
+    });
+    accTot += r.acc || 0;
+    outTot += r.out || 0;
+    accMin += r.accMin || 0;
+    blocks += r.n || 0;
+    if((r.maxDur || 0) > maxDur) maxDur = r.maxDur;
+  });
+
+  const plan = boardPlans[pid + '|' + dates[0]] || null;
+  const planned = plan ? plan.planned : 0;
+  const done    = plan ? plan.done    : 0;
+
+  // A short plan cannot reach 100% — 2 planned / 2 done scores 67%, not 100%.
+  const exec       = planned > 0 ? Math.min(1, done / Math.max(planned, MIN_PLAN_ITEMS)) : null;
+  const outcome    = accTot  > 0 ? outTot / accTot : null;
+  const discipline = elapsed > 0 ? Math.min(1, days / elapsed) : null;
+  const leverage   = workMin > 0 ? levSum / workMin : null;
+  const focusAvg   = accTot  > 0 ? accMin / accTot : null;
+
+  const hasData = totalMin > 0 || planned > 0;
+  const score = hasData ? Math.round(100 * (
+      SCORE_W.exec       * (exec       === null ? 0 : exec) +
+      SCORE_W.outcome    * (outcome    === null ? 0 : outcome) +
+      SCORE_W.discipline * (discipline === null ? 0 : discipline)
+    )) : null;
+
+  return {dates, elapsed, catMin, totalMin, workMin, accTot, outTot, accMin, blocks,
+          maxDur, days, planned, done, exec, outcome, discipline, leverage, focusAvg, score};
+}
+
+// ---- Your own best weeks become the benchmark. No invented targets.
+function bestWeekMix(pid, weeksBack){
+  const rows = [];
+  for(let w = -weeksBack; w <= -1; w++){
+    const s = personWeek(pid, w);
+    if(s.score !== null && s.workMin > 0) rows.push(s);
+  }
+  if(rows.length < 3) return null;
+  rows.sort((a,b)=>b.score - a.score);
+  const top = rows.slice(0,3);
+  const totW = top.reduce((s,x)=>s + x.workMin, 0);
+  return {
+    n: top.length,
+    avgScore: Math.round(top.reduce((s,x)=>s + x.score, 0) / top.length),
+    share: (k)=> totW > 0 ? top.reduce((s,x)=>s + (x.catMin[k] || 0), 0) / totW * 100 : 0
+  };
+}
+
+// ============================================================================
+// INNOVATION SECTION — "MOVE MY SCORE"
+// The score formula is known, so the exact value of each possible action can
+// be calculated rather than guessed. This turns a judgement into a to-do list:
+// every line says what to do and precisely how many points it is worth.
+// ============================================================================
+function scoreMoves(pid){
+  const s = personWeek(pid, 0);
+  const moves = [];
+  const P = v => Math.round(100 * v); // points, since score is already 0-100
+
+  // 1. Finish what is already planned
+  if(s.planned > 0 && s.done < s.planned){
+    const denom = Math.max(s.planned, MIN_PLAN_ITEMS);
+    const remaining = s.planned - s.done;
+    const perItem = SCORE_W.exec / denom;
+    const all = Math.min(SCORE_W.exec - SCORE_W.exec * (s.done/denom), perItem * remaining);
+    moves.push({
+      gain: P(all),
+      title: `Close your ${remaining} open plan item${remaining>1?'s':''}`,
+      sub: `Each one is worth ${P(perItem)} points. This is the biggest single lever you have.`
+    });
+  }
+
+  // 2. Write the missing outcomes — takes minutes, and the work is already done
+  if(s.accTot > 0 && s.outTot < s.accTot){
+    const missing = s.accTot - s.outTot;
+    const gain = SCORE_W.outcome * (1 - (s.outTot / s.accTot));
+    moves.push({
+      gain: P(gain),
+      title: `Write outcomes on ${missing} block${missing>1?'s':''} already logged`,
+      sub: `Work you have already done but never recorded a result for. Roughly ${P(gain/missing)} points each, and it costs you a few minutes.`
+    });
+  }
+
+  // 3. Log the days you skipped
+  if(s.discipline !== null && s.discipline < 1){
+    const missingDays = s.elapsed - s.days;
+    const gain = SCORE_W.discipline * (1 - s.discipline);
+    moves.push({
+      gain: P(gain),
+      title: `Fill in your ${missingDays} missing day${missingDays>1?'s':''}`,
+      sub: `Back-date them in My Day. It also makes every other number on this page accurate.`
+    });
+  }
+
+  // 4. No plan at all — the single biggest hole
+  if(s.planned === 0){
+    moves.push({
+      gain: P(SCORE_W.exec),
+      title: `Save a week plan with at least ${MIN_PLAN_ITEMS} items`,
+      sub: `Half the score is plan-versus-delivered. With no plan saved, you forfeit all of it.`
+    });
+  } else if(s.planned < MIN_PLAN_ITEMS){
+    const gain = SCORE_W.exec * (s.done/MIN_PLAN_ITEMS) * ((MIN_PLAN_ITEMS/s.planned) - 1);
+    moves.push({
+      gain: P(Math.max(0, Math.min(gain, SCORE_W.exec - SCORE_W.exec*(s.done/MIN_PLAN_ITEMS)))),
+      title: `Add ${MIN_PLAN_ITEMS - s.planned} more item${(MIN_PLAN_ITEMS-s.planned)>1?'s':''} to your plan`,
+      sub: `A plan shorter than ${MIN_PLAN_ITEMS} items can't reach full marks, however much of it you finish.`
+    });
+  }
+
+  // 5. Doesn't move the score, but moves the week — said honestly as such
+  const trav = s.catMin['travel'] || 0, site = s.catMin['site'] || 0;
+  if(site > 0 && trav / site > 1.5){
+    moves.push({
+      gain: 0,
+      title: `Batch your site visits — ${fmtH(trav)} travelling for ${fmtH(site)} on site`,
+      sub: `Worth no points (travel isn't scored) but two sites in one run could free up ${fmtH(trav*0.3)} next week.`
+    });
+  }
+
+  moves.sort((a,b)=>b.gain - a.gain);
+  return {now: s.score, moves, ceiling: s.score === null ? null :
+    Math.min(100, s.score + moves.reduce((t,m)=>t + m.gain, 0))};
+}
+
+// ---- "Copy the leader": your mix against the week's top scorer, in hours.
+function copyLeader(pid){
+  const sp = spotlight();
+  if(!sp.best || sp.best.p.id === pid) return null;
+  const me = personWeek(pid, 0);
+  const them = sp.best.s;
+  if(me.workMin === 0 || them.workMin === 0) return null;
+  const keys = ['site','desk','approval','meeting','call','travel','culture','training','other'];
+  const rows = keys.map(k=>{
+    const mine  = me.workMin   > 0 ? (me.catMin[k]   || 0) / me.workMin   * 100 : 0;
+    const yours = them.workMin > 0 ? (them.catMin[k] || 0) / them.workMin * 100 : 0;
+    return {k, label: catMap[k] ? catMap[k].label : k, mine, yours, diff: mine - yours,
+            hrs: Math.abs(me.workMin * (mine - yours) / 100)};
+  }).filter(r=>Math.abs(r.diff) >= 4 && (r.mine > 0 || r.yours > 0))
+    .sort((a,b)=>Math.abs(b.diff) - Math.abs(a.diff)).slice(0,4);
+  return rows.length ? {leader: sp.best.p.name, rows} : null;
+}
+
+// ---- "Where should I focus" — every line derived, none of them canned.
+function focusInsights(pid){
+  const cur  = personWeek(pid, 0);
+  const prev = personWeek(pid, -1);
+  const best = bestWeekMix(pid, 8);
+  const out  = [];
+  const share = (w,k)=> w.workMin > 0 ? (w.catMin[k] || 0) / w.workMin * 100 : 0;
+
+  if(cur.planned === 0){
+    out.push({tone:'warn', title:'No week plan saved',
+      body:'Half your score is plan-vs-done. With no plan the week runs on whatever walks in. Add 3–7 items in My Week.'});
+  } else if(cur.planned < MIN_PLAN_ITEMS){
+    out.push({tone:'watch', title:`Only ${cur.planned} item${cur.planned>1?'s':''} planned this week`,
+      body:`The score assumes at least ${MIN_PLAN_ITEMS} planned items, so a short plan can't reach 100%. Add what else has to happen.`});
+  }
+
+  if(cur.outcome !== null && cur.outcome < 0.7){
+    out.push({tone:'warn', title:`Only ${Math.round(cur.outcome*100)}% of your work has a real outcome`,
+      body:`${cur.accTot - cur.outTot} of ${cur.accTot} blocks have no outcome written, or just a word or two. Time with no recorded result is time you can't defend.`});
+  }
+
+  const trav = cur.catMin['travel'] || 0, site = cur.catMin['site'] || 0;
+  if(site > 0 && trav / site > 1.5){
+    out.push({tone:'watch', title:`You travelled ${(trav/site).toFixed(1)}× longer than you were on site`,
+      body:`${fmtH(trav)} travelling for ${fmtH(site)} on site. Batching two or three sites into one run moves this fast.`});
+  } else if(site === 0 && trav > 120){
+    out.push({tone:'watch', title:`${fmtH(trav)} of travel with no site visit logged`,
+      body:'Travel with nothing at the end of it is the easiest hour in the week to win back.'});
+  }
+
+  if(best){
+    const mNow  = share(cur,'meeting') + share(cur,'call') + share(cur,'ho');
+    const mBest = best.share('meeting') + best.share('call') + best.share('ho');
+    if(mNow - mBest >= 8){
+      out.push({tone:'warn', title:`Meetings are ${Math.round(mNow-mBest)} points above your best weeks`,
+        body:`In your three strongest weeks meetings were ${Math.round(mBest)}% of your time. This week they're ${Math.round(mNow)}%. That's the single biggest difference.`});
+    }
+    const sNow = share(cur,'site'), sBest = best.share('site');
+    if(sBest - sNow >= 6){
+      out.push({tone:'watch', title:`Site time is ${Math.round(sBest-sNow)} points below your best weeks`,
+        body:`Your best weeks ran ${Math.round(sBest)}% site time; this week is ${Math.round(sNow)}%.`});
+    }
+    const dNow = share(cur,'desk'), dBest = best.share('desk');
+    if(dBest - dNow >= 8){
+      out.push({tone:'watch', title:'Less deep desk work than in your best weeks',
+        body:`${Math.round(dBest)}% in your best weeks against ${Math.round(dNow)}% now — the thinking work is getting squeezed out.`});
+    }
+  }
+
+  if(cur.focusAvg !== null && cur.focusAvg < 40 && cur.blocks >= 6){
+    out.push({tone:'watch', title:`Your day is running in ${Math.round(cur.focusAvg)}-minute pieces`,
+      body:'Chopped-up blocks. Protecting one two-hour stretch a day is usually worth more than the hours themselves.'});
+  }
+
+  if(prev.totalMin > 0 && cur.totalMin > prev.totalMin &&
+     cur.outcome !== null && prev.outcome !== null && cur.outcome < prev.outcome - 0.1){
+    out.push({tone:'warn', title:'Busier than last week, producing less',
+      body:`Hours up from ${fmtH(prev.totalMin)} to ${fmtH(cur.totalMin)}, but recorded outcomes down from ${Math.round(prev.outcome*100)}% to ${Math.round(cur.outcome*100)}%. This is the one worth acting on.`});
+  }
+
+  if(cur.discipline !== null && cur.discipline < 0.7){
+    out.push({tone:'warn', title:`You logged ${cur.days} of ${cur.elapsed} days`,
+      body:'Every number here is built from the days you filled in. Missing days make your own scorecard wrong.'});
+  }
+
+  if(!out.length){
+    out.push({tone:'good', title:'Nothing to flag this week',
+      body:'Plan, outcomes, discipline and time mix all look healthy. Keep the rhythm.'});
+  }
+  return out;
+}
+
+// ---- Spotlight: who to copy this week, and who moved the most.
+function spotlight(){
+  const people = (boardPeople.length ? boardPeople : roster);
+  const rows = people.map(p=>({p, s: personWeek(p.id, 0)}))
+    .filter(r=>r.s.score !== null && r.s.totalMin >= SPOTLIGHT_MIN_MIN)
+    .sort((a,b)=>b.s.score - a.s.score);
+
+  const improved = people.map(p=>{
+    const now = personWeek(p.id, 0);
+    const past = [];
+    for(let w=-4; w<=-1; w++){
+      const x = personWeek(p.id, w);
+      if(x.score !== null) past.push(x.score);
+    }
+    if(now.score === null || past.length < 2) return null;
+    const avg = past.reduce((a,b)=>a+b,0) / past.length;
+    return {p, now: now.score, avg: Math.round(avg), gain: now.score - avg};
+  }).filter(Boolean).sort((a,b)=>b.gain - a.gain);
+
+  return {top: rows.slice(0,6), best: rows[0] || null,
+          improved: (improved[0] && improved[0].gain >= 5) ? improved[0] : null};
+}
+
+// ---- Why did the top person win? Say it in words people can copy.
+function spotlightReason(s){
+  const bits = [];
+  if(s.planned > 0) bits.push(`planned ${s.planned}, delivered ${s.done}`);
+  if(s.outcome !== null) bits.push(`outcomes on ${Math.round(s.outcome*100)}% of blocks`);
+  bits.push(`reported ${s.days} of ${s.elapsed} days`);
+  const cats = Object.keys(s.catMin).filter(k=>!BREAK_CATS.has(k))
+    .sort((a,b)=>s.catMin[b] - s.catMin[a]).slice(0,2)
+    .map(k=>(catMap[k] ? catMap[k].label : k) + ' ' + fmtH(s.catMin[k]));
+  if(cats.length) bits.push('mostly ' + cats.join(' + '));
+  return bits.join(' · ');
+}
+
+// ---- Render helpers -------------------------------------------------------
+function pctOrDash(v){ return v === null ? '—' : Math.round(v*100) + '%'; }
+
+function insightHTML(list){
+  return list.map(i=>`
+    <div class="ins-card ins-${i.tone}">
+      <div class="ins-t">${i.title}</div>
+      <div class="ins-b">${i.body}</div>
+    </div>`).join('');
+}
+
+function movesHTML(pid){
+  const r = scoreMoves(pid);
+  if(r.now === null) return `<div class="empty-note">Nothing logged this week yet — fill in My Day and My Week first.</div>`;
+  if(!r.moves.length) return `<div class="ins-card ins-good"><div class="ins-t">You're at ${r.now}. Nothing left to fix.</div><div class="ins-b">Plan delivered, outcomes recorded, every day logged. This is what a full week looks like.</div></div>`;
+  const head = `<div style="font-size:12.5px;margin-bottom:10px;color:var(--ink-soft);">
+      You're on <b style="font-size:15px;color:var(--ink);">${r.now}</b> right now.
+      Doing everything below would take you to <b style="font-size:15px;color:#4B7355;">${r.ceiling}</b>.
+    </div>`;
+  return head + r.moves.map(m=>`
+    <div class="move-row">
+      <div class="mv-txt"><b>${m.title}</b><div class="mv-sub">${m.sub}</div></div>
+      <div class="move-gain ${m.gain===0?'zero':''}">${m.gain===0?'—':'+'+m.gain}</div>
+    </div>`).join('');
+}
+
+function copyLeaderHTML(pid){
+  const c = copyLeader(pid);
+  if(!c) return `<div class="hint">No comparison available yet — either you're the top scorer this week, or there isn't enough logged data to compare.</div>`;
+  return `<table class="copy-grid">
+    <tr><th>Activity</th><th>You</th><th>${c.leader}</th><th>Difference</th></tr>` +
+    c.rows.map(r=>`<tr>
+      <td>${r.label}</td>
+      <td>${Math.round(r.mine)}%</td>
+      <td>${Math.round(r.yours)}%</td>
+      <td class="copy-diff ${r.diff>0?'copy-more':'copy-less'}">
+        ${r.diff>0?'+':'−'}${Math.abs(Math.round(r.diff))}pt · ${fmtH(r.hrs)}
+      </td>
+    </tr>`).join('') + `</table>
+    <div class="hint">Red means you spend more of your week there than ${c.leader} does; green means less. The hours column is what that gap is worth in your own week.</div>`;
+}
+
+function spotlightHTML(){
+  const sp = spotlight();
+  if(!sp.best) return `<div class="empty-note">Not enough logged yet this week to name anyone.</div>`;
+  let html = `
+    <div class="spot-hero">
+      <div class="sh-eye">★ Most productive this week</div>
+      <div class="sh-name">${sp.best.p.name} <span class="sh-score">— ${sp.best.s.score}</span></div>
+      <div class="sh-why">${spotlightReason(sp.best.s)}</div>
+    </div>`;
+  if(sp.improved){
+    html += `
+    <div class="spot-imp">
+      <div class="si-eye">▲ Most improved</div>
+      <div style="font-size:13.5px;font-weight:700;">${sp.improved.p.name}
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4B7355;">
+          ${sp.improved.avg} → ${sp.improved.now} (+${Math.round(sp.improved.gain)})</span></div>
+    </div>`;
+  }
+  html += `<table class="pred-table">
+    <tr><th>#</th><th>Name</th><th>Score</th><th>Plan</th><th>Outcomes</th><th>Days</th></tr>` +
+    sp.top.map((r,i)=>`<tr>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--grey);">${i+1}</td>
+      <td class="pred-name">${r.p.name}</td>
+      <td><strong>${r.s.score}</strong></td>
+      <td>${r.s.planned ? r.s.done + '/' + r.s.planned : '—'}</td>
+      <td>${pctOrDash(r.s.outcome)}</td>
+      <td>${r.s.days}/${r.s.elapsed}</td>
+    </tr>`).join('') + `</table>`;
+  return html;
+}
+
+// ---- Manager scorecard (replaces the old efficiency view) -----------------
+renderMyStats = async function(){
+  await refreshBoard();
+  const me = auth.person.id;
+  const s = personWeek(me, 0);
+
+  document.getElementById('myKpis').innerHTML = `
+    <div class="kpi"><div class="num">${s.score !== null ? s.score : '—'}</div><div class="lbl">Productivity Score</div></div>
+    <div class="kpi"><div class="num">${s.planned ? s.done + '/' + s.planned : '—'}</div><div class="lbl">Plan Delivered</div></div>
+    <div class="kpi"><div class="num">${pctOrDash(s.outcome)}</div><div class="lbl">Outcomes Recorded</div></div>
+    <div class="kpi"><div class="num">${pctOrDash(s.leverage)}</div><div class="lbl">Leverage Mix</div></div>
+    <div class="kpi"><div class="num">${pctOrDash(s.discipline)}</div><div class="lbl">Discipline</div></div>
+    <div class="kpi"><div class="num">${fmtH(s.totalMin)}</div><div class="lbl">Hours This Week</div></div>
+  `;
+
+  // Trend on the real score, not the old always-95% efficiency number
+  const hist = [];
+  for(let w=-5; w<=0; w++){
+    const x = personWeek(me, w);
+    const mon = new Date(x.dates[0]);
+    hist.push({label: mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'}), y: x.score});
+  }
+  const pts = hist.map((h,i)=>({x:i, y:h.y})).filter(p=>p.y !== null);
+  const reg = linRegress(pts);
+  let projLabels = [], projValues = [];
+  if(reg && pts.length >= 2){
+    const lastX = pts[pts.length-1].x;
+    for(let k=1; k<=2; k++){
+      const x = lastX + k;
+      projValues.push(Math.max(0, Math.min(100, Math.round(reg.slope*x + reg.intercept))));
+      const d = new Date(getMonday(x - (hist.length-1)));
+      projLabels.push(d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}));
+    }
+  }
+  const allLabels = [...hist.map(h=>h.label), ...projLabels];
+  const actualData = [...hist.map(h=>h.y), ...projLabels.map(()=>null)];
+  const projData = [...hist.map(()=>null)];
+  if(projValues.length){
+    projData[hist.length-1] = hist[hist.length-1].y;
+    projValues.forEach(v=>projData.push(v));
+  }
+  const ctx = document.getElementById('myTrendChart').getContext('2d');
+  if(myTrendInst) myTrendInst.destroy();
+  myTrendInst = new Chart(ctx, {
+    type:'line',
+    data:{labels: allLabels, datasets:[
+      {label:'Actual', data:actualData, borderColor:'#2B4C5C', backgroundColor:'#2B4C5C', tension:0.25, spanGaps:true, pointRadius:4},
+      {label:'Projected', data:projData, borderColor:'#A9552E', borderDash:[5,4], backgroundColor:'#A9552E', tension:0.25, spanGaps:true, pointRadius:4}
+    ]},
+    options:{responsive:true, plugins:{legend:{labels:{font:{size:10}}}},
+      scales:{y:{min:0,max:100,ticks:{font:{size:9}}}, x:{ticks:{font:{size:9}}}}}
+  });
+
+  document.getElementById('myMoveBody').innerHTML  = movesHTML(me);
+  document.getElementById('myCopyBody').innerHTML  = copyLeaderHTML(me);
+  document.getElementById('myFocusBody').innerHTML = insightHTML(focusInsights(me));
+  document.getElementById('mySpotBody').innerHTML  = spotlightHTML();
+
+  // Time-split donut
+  const donutCtx = document.getElementById('myDonutChart').getContext('2d');
+  if(myDonutInst) myDonutInst.destroy();
+  const legendBox = document.getElementById('myDonutLegend');
+  if(s.totalMin > 0){
+    const dCats = CATS.filter(c=>(s.catMin[c.k]||0) > 0);
+    myDonutInst = new Chart(donutCtx, {
+      type:'doughnut',
+      data:{labels:dCats.map(c=>c.label), datasets:[{data:dCats.map(c=>s.catMin[c.k]), backgroundColor:dCats.map(c=>c.color), borderWidth:1}]},
+      options:{plugins:{legend:{display:false}}, cutout:'62%'}
+    });
+    legendBox.innerHTML = dCats.map(c=>`<span><i style="background:${c.color}"></i>${c.label} — ${fmtH(s.catMin[c.k])}</span>`).join('');
+  } else {
+    legendBox.innerHTML = `<div class="empty-note">Nothing logged this week yet. Fill "My Day" first.</div>`;
+  }
+};
+
+// ---- Add the leaderboard to the CEO view without touching renderCEO ------
+const _origRenderCEO = renderCEO;
+renderCEO = async function(){
+  _origRenderCEO.apply(this, arguments);
+  await refreshBoard();
+  const body = document.getElementById('ceoSpotBody');
+  if(body) body.innerHTML = spotlightHTML();
+};
 
 // ================= INIT =================
 (function init(){
