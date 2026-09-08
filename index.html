@@ -648,8 +648,8 @@ table.grid-table td{
       <div id="taskResolvedList" style="display:none;"></div>
     </div>
     <div class="card">
-      <h2 style="cursor:pointer;" id="legacyPlanToggle">Older plan history — before this upgrade <span style="font-size:11px;color:var(--grey);">(click to expand)</span></h2>
-      <div class="hint" style="margin-top:0;">Read-only — nothing here was deleted when tasks moved to this new list.</div>
+      <h2 style="cursor:pointer;" id="legacyPlanToggle">Items from before this upgrade <span style="font-size:11px;color:var(--grey);">(click to expand)</span></h2>
+      <div class="hint" style="margin-top:0;">Same rules as above — mark Done (with a result), Moved or Dropped. Only the CEO can delete a task, here too.</div>
       <div id="legacyPlanList" style="display:none;"></div>
     </div>
   </div>
@@ -1478,23 +1478,72 @@ function renderTasks(){
     : `<div class="empty-note">Nothing resolved yet.</div>`;
   wireTaskButtons(document.getElementById('taskResolvedList'));
 
-  // Legacy (pre-upgrade) weekly plans — read-only, every week that was ever saved
+  // Older-than-this-upgrade weekly plans — these are real items people are
+  // still working, just saved under the old per-week format. Actionable the
+  // same way as everything else: Done (with a result)/Moved/Dropped. No
+  // delete button here either — same rule as the live task list, and for
+  // the same reason: only the CEO can remove a task.
   const legacyWeeks = Object.keys(plansIndex).filter(k=>k.startsWith(auth.person.id+'|')).sort().reverse();
   document.getElementById('legacyPlanList').innerHTML = legacyWeeks.length
     ? legacyWeeks.map(k=>{
-        const ws = k.split('|')[1];
         const items = plansIndex[k] || [];
         if(!items.length) return '';
-        return `<div class="pi-week-hdr">Week of ${ws}</div>` + items.map(it=>{
-          const c = catMap[it.cat] || {label:it.cat, color:'#888'};
-          const mark = it.status==='done'?'✅':it.status==='moved'?'↪':it.status==='dropped'?'✕':'○';
-          return `<div class="outcome-row">
-            <div class="om-head">${mark} ${it.text} <span class="om-agenda">· ${c.label} · ${it.status}</span></div>
-            ${it.result?`<div class="om-out">→ ${it.result}</div>`:''}
-          </div>`;
-        }).join('');
+        return `<div class="pi-week-hdr">Week of ${k.split('|')[1]}</div>` +
+          items.map(it=>renderLegacyItem(it, k)).join('');
       }).join('')
     : `<div class="empty-note">No plans from before this upgrade.</div>`;
+  wireLegacyPlanButtons(document.getElementById('legacyPlanList'));
+}
+
+function renderLegacyItem(it, weekKey){
+  const c = catMap[it.cat] || {label:it.cat, color:'#888'};
+  return `<div class="plan-item st-${it.status}">
+    <div>
+      <div class="pi-cat" style="color:${c.color};">${c.label}</div>
+      <div class="pi-text">${it.status==='done'?'✅ ':''}${it.text}</div>
+      ${it.result?`<div class="pi-result">→ ${it.result}</div>`:''}
+    </div>
+    <div class="pi-btns">
+      <button type="button" class="pi-btn ${it.status==='done'?'on-done':''}" data-week="${weekKey}" data-id="${it.id}" data-st="done">Done</button>
+      <button type="button" class="pi-btn ${it.status==='moved'?'on-moved':''}" data-week="${weekKey}" data-id="${it.id}" data-st="moved">Moved</button>
+      <button type="button" class="pi-btn ${it.status==='dropped'?'on-dropped':''}" data-week="${weekKey}" data-id="${it.id}" data-st="dropped">Drop</button>
+    </div>
+  </div>`;
+}
+
+// Status changes on a legacy item write back through the ORIGINAL savePlan
+// action (unchanged since v2.2) — the whole week's item array is resaved,
+// same mechanism the old planner always used. Works regardless of which
+// backend variant is deployed, since savePlan exists in both.
+function wireLegacyPlanButtons(container){
+  container.querySelectorAll('.pi-btn').forEach(btn=>btn.addEventListener('click', async e=>{
+    const weekKey = e.currentTarget.dataset.week;
+    const id = e.currentTarget.dataset.id;
+    const st = e.currentTarget.dataset.st;
+    const items = plansIndex[weekKey];
+    const it = items && items.find(x=>x.id===id);
+    if(!it) return;
+
+    let status = st, result = it.result;
+    if(it.status===st){ status='planned'; result=''; }
+    else if(st==='done'){
+      const res = prompt('What was the result / outcome of this item?', it.result||'');
+      if(res===null || !res.trim()){ alert('A Done item needs its result — same rule as everything else.'); return; }
+      result = res.trim();
+    } else { result = ''; }
+
+    const prevStatus = it.status, prevResult = it.result;
+    it.status = status; it.result = result;
+    renderTasks();
+    try{
+      const weekStart = weekKey.split('|')[1];
+      await apiPost({action:'savePlan', personId:auth.person.id, personName:auth.person.name, weekStart, items});
+    }catch(err){
+      it.status = prevStatus; it.result = prevResult;
+      renderTasks();
+      alert('Could not save that change — check internet and try again.');
+    }
+  }));
 }
 
 function renderTaskItem(it){
