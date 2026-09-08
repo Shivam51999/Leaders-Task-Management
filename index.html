@@ -450,6 +450,13 @@ table.grid-table td{
 .plan-item .pi-text{font-size:13px;line-height:1.45;}
 .plan-item .pi-cat{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--grey,#888);}
 .plan-item .pi-result{font-size:12px;color:var(--ink-soft,#555);margin-top:2px;}
+.tag-ceo{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.3px;padding:1px 6px;border-radius:8px;background:#2B4C5C;color:#fff;text-transform:none;}
+.tag-overdue{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.3px;padding:1px 6px;border-radius:8px;background:#B03A2E;color:#fff;text-transform:none;}
+.tag-period{display:inline-block;margin-left:6px;font-size:9px;padding:1px 6px;border-radius:8px;background:var(--paper-dark,#eee);color:var(--grey,#888);text-transform:none;}
+.pi-week-hdr{font-size:11px;font-weight:700;color:var(--grey,#888);margin:10px 0 2px;text-transform:uppercase;letter-spacing:.4px;}
+.pi-week-hdr:first-child{margin-top:0;}
+.ceo-del-btn{flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1px solid rgba(176,58,46,.35);background:rgba(176,58,46,.08);color:#B03A2E;font-size:12px;line-height:1;cursor:pointer;}
+.ceo-del-btn:hover{background:rgba(176,58,46,.18);}
 .plan-item .pi-btns{display:flex;gap:4px;flex-shrink:0;}
 .pi-btn{font-size:11px;padding:3px 8px;border:1px solid var(--line,#ccc);background:transparent;border-radius:5px;cursor:pointer;}
 .pi-btn.on-done{background:#E4EBE1;border-color:#4B7355;color:#4B7355;font-weight:700;}
@@ -619,24 +626,31 @@ table.grid-table td{
     </div>
   </div>
 
-  <!-- MY WEEK TAB (managers) — plan vs achieved -->
+  <!-- MY WEEK TAB (managers) — all open tasks, assigned by CEO or added by you -->
   <div id="tab-plan" style="display:none;">
     <div class="card">
-      <div class="nav-week">
-        <button id="planPrevWeek">‹</button>
-        <div class="wk-label" id="planWeekLabel"></div>
-        <button id="planNextWeek">›</button>
+      <h2>My Tasks</h2>
+      <div class="hint" style="margin-top:0;">Every open task — yours and anything the CEO has assigned you — regardless of which week it was created. Mark Done (with the result), Moved or Dropped as you go. Only the CEO can delete a task; if something was added by mistake, mark it Dropped.</div>
+      <div id="taskList"></div>
+      <label>Add a task</label>
+      <input type="text" id="taskText" placeholder="e.g. Close Momento CP incentive grid">
+      <div class="row2">
+        <div><label style="margin-top:0;">Category</label><select id="taskCat"></select></div>
+        <div><label style="margin-top:0;">Timeframe</label>
+          <select id="taskPeriod"><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
+        </div>
       </div>
-      <h2>My Week Plan</h2>
-      <div class="hint" style="margin-top:0;">List the 3–7 things that must get done this week. Mark each Done (with the result), Moved or Dropped as the week goes. The CEO view compares planned vs achieved.</div>
-      <div id="planList"></div>
-      <label>Add a planned item</label>
-      <input type="text" id="planText" placeholder="e.g. Close Momento CP incentive grid">
-      <label>Category</label>
-      <select id="planCat"></select>
-      <button class="add-btn" id="addPlanBtn">+ Add to Plan</button>
-      <button class="save-btn" id="savePlanBtn">Save Week Plan</button>
-      <div id="planStatus"></div>
+      <button class="add-btn" id="addTaskBtn">+ Add Task</button>
+      <div id="taskStatus"></div>
+    </div>
+    <div class="card">
+      <h2 style="cursor:pointer;" id="taskResolvedToggle">Recently Resolved <span style="font-size:11px;color:var(--grey);">(click to expand)</span></h2>
+      <div id="taskResolvedList" style="display:none;"></div>
+    </div>
+    <div class="card">
+      <h2 style="cursor:pointer;" id="legacyPlanToggle">Older plan history — before this upgrade <span style="font-size:11px;color:var(--grey);">(click to expand)</span></h2>
+      <div class="hint" style="margin-top:0;">Read-only — nothing here was deleted when tasks moved to this new list.</div>
+      <div id="legacyPlanList" style="display:none;"></div>
     </div>
   </div>
 
@@ -647,7 +661,7 @@ table.grid-table td{
       <div class="kpi-strip" id="myKpis"></div>
       <span class="eyebrow">My productivity score — last 6 weeks + projection</span>
       <div class="chart-box"><canvas id="myTrendChart" height="180"></canvas></div>
-      <div class="hint" id="myStatsHint">Productivity Score = plan delivered (50%) + outcomes recorded (30%) + reporting discipline (20%). Hours logged are deliberately excluded. Dashed segment is a projection from your recent trend.</div>
+      <div class="hint" id="myStatsHint">Productivity Score = task backlog resolved (30%) + outcomes recorded (25%) + reporting discipline (15%) + hours vs a standard 9h day minus 20-min lunch (30%). Log under 60% of a standard day and the score is capped at that percentage, whatever the quality of the hours you did log. Dashed segment is a projection from your recent trend.</div>
     </div>
 
     <!-- v2.3: what would actually move the number -->
@@ -785,12 +799,29 @@ table.grid-table td{
     </div>
 
     <div class="card">
-      <h2>Plan vs Achieved — This Week</h2>
+      <h2>Assign a Task</h2>
+      <div class="hint" style="margin-top:0;">Goes straight into that manager's My Week tab. Only you can delete a task once it's assigned — managers mark it Done, Moved or Dropped instead.</div>
+      <label style="margin-top:0;">Manager</label>
+      <select id="assignPerson"></select>
+      <label>Task</label>
+      <input type="text" id="assignText" placeholder="e.g. Close Q2 CP incentive reconciliation">
+      <div class="row2">
+        <div><label style="margin-top:0;">Category</label><select id="assignCat"></select></div>
+        <div><label style="margin-top:0;">Timeframe</label>
+          <select id="assignPeriod"><option value="weekly">Weekly (due in 7 days)</option><option value="monthly">Monthly (due in 30 days)</option></select>
+        </div>
+      </div>
+      <button class="add-btn" id="assignTaskBtn">Assign Task</button>
+      <div id="assignStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2>Task Backlog — Open &amp; Recently Resolved</h2>
       <table class="pred-table" id="ceoPlanTable"></table>
-      <label style="margin-top:10px;">See one manager's plan items</label>
+      <label style="margin-top:10px;">See one manager's full task list</label>
       <select id="ceoPlanPerson" onchange="renderCEO()"><option value="">— Select manager —</option></select>
       <div id="ceoPlanItems"></div>
-      <div class="hint">Done % = items marked Done ÷ items planned. "No plan" late in the week means the person is running on incoming work, not priorities — worth a conversation either way.</div>
+      <div class="hint">Open tasks count against the score until resolved, however old. Resolved tasks age out of "Done" after 30 days so the number reflects recent cadence, not a lucky quarter. Delete (✕) is CEO-only.</div>
     </div>
 
     <div class="card">
@@ -871,7 +902,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzfInhfIbpP1NsL6pM16C7U
 
 let auth = null;          // {loginId, pin, role:'ceo'|'manager', person:{id,name,role,type}|null}
 let logsIndex = {};       // `${personId}|${date}` -> blocks array
-let plansIndex = {};      // `${personId}|${weekStart}` -> plan items array
+let plansIndex = {};      // `${personId}|${weekStart}` -> legacy plan items array (v2.2, history only)
+let tasksList = [];        // own tasks (manager) or everyone's (CEO) — v2.3, live
 
 function setSyncNote(msg){
   document.getElementById('syncNote').textContent = msg || '';
@@ -926,6 +958,7 @@ function ingest(data){
   (data.plans || []).forEach(pl=>{
     plansIndex[pl.personId + '|' + pl.weekStart] = pl.items || [];
   });
+  tasksList = data.tasks || [];
 }
 
 async function refreshData(){
@@ -1109,7 +1142,7 @@ async function openTab(tabId, btnEl){
   if(tabId==='mystats') renderMyStats();
   if(tabId==='roster') renderRosterList();
   if(tabId==='log') loadExistingLog();
-  if(tabId==='plan') renderPlan();
+  if(tabId==='plan') renderTasks();
 }
 
 // ================= ROSTER (CEO) =================
@@ -1391,97 +1424,142 @@ function prefillStart(){
   updateEndPreview();
 }
 
-// ================= MY WEEK PLANNER (managers) =================
-let planWeekOffset = 0;   // 0 = this week, +1 = next week (plan ahead), -1 = review last week
-let planItems = [];       // working copy for the week being viewed
+// ================= MY TASKS (managers) — v2.3 persistent task list =================
+// Tasks aren't week-scoped: an open task (yours or CEO-assigned) stays visible
+// and counts against the score until it's Done, Moved, or Dropped, however
+// long ago it was created. Only the CEO can delete a task (see Code.gs); a
+// manager who added something by mistake marks it Dropped instead.
 
-function planWeekKey(){ return weekDates(planWeekOffset)[0]; } // Monday YYYY-MM-DD
+function myOpenTasks(){
+  return tasksList.filter(t=>t.personId===auth.person.id && (t.status==='planned'||t.status==='moved'));
+}
+function myResolvedTasks(){
+  return tasksList.filter(t=>t.personId===auth.person.id && (t.status==='done'||t.status==='dropped'))
+    .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+}
 
-function renderPlan(){
+function renderTasks(){
   if(!auth || auth.role!=='manager') return;
-  const dates = weekDates(planWeekOffset);
-  const mon = new Date(dates[0]), sun = new Date(dates[6]);
-  document.getElementById('planWeekLabel').textContent =
-    mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' – ' +
-    sun.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) +
-    (planWeekOffset===0?' (this week)':planWeekOffset===1?' (next week)':'');
-  planItems = (plansIndex[auth.person.id + '|' + planWeekKey()] || []).map(x=>Object.assign({},x));
-  // category dropdown: accountable, visible categories
-  const sel = document.getElementById('planCat');
-  if(!sel.options.length || sel.options.length<2){
+  const sel = document.getElementById('taskCat');
+  if(!sel.options.length){
     sel.innerHTML = CATS.filter(c=>!c.hidden && ACC_CATS.has(c.k))
       .map(c=>`<option value="${c.k}">${c.label}</option>`).join('');
   }
-  renderPlanList();
+  const today = todayStr();
+  const open = myOpenTasks().sort((a,b)=>{
+    const aOver = a.dueDate && a.dueDate < today, bOver = b.dueDate && b.dueDate < today;
+    if(aOver !== bOver) return aOver ? -1 : 1;               // overdue first
+    const aCeo = a.assignedBy==='ceo', bCeo = b.assignedBy==='ceo';
+    if(aCeo !== bCeo) return aCeo ? -1 : 1;                   // CEO-assigned next
+    return (a.createdAt||'').localeCompare(b.createdAt||'');  // then oldest first
+  });
+  document.getElementById('taskList').innerHTML = open.length ? open.map(renderTaskItem).join('')
+    : `<div class="empty-note">No open tasks. Add one below, or wait for the CEO to assign one.</div>`;
+  wireTaskButtons(document.getElementById('taskList'));
+
+  const resolved = myResolvedTasks().slice(0,15);
+  document.getElementById('taskResolvedList').innerHTML = resolved.length
+    ? resolved.map(renderTaskItem).join('')
+    : `<div class="empty-note">Nothing resolved yet.</div>`;
+  wireTaskButtons(document.getElementById('taskResolvedList'));
+
+  // Legacy (pre-upgrade) weekly plans — read-only, every week that was ever saved
+  const legacyWeeks = Object.keys(plansIndex).filter(k=>k.startsWith(auth.person.id+'|')).sort().reverse();
+  document.getElementById('legacyPlanList').innerHTML = legacyWeeks.length
+    ? legacyWeeks.map(k=>{
+        const ws = k.split('|')[1];
+        const items = plansIndex[k] || [];
+        if(!items.length) return '';
+        return `<div class="pi-week-hdr">Week of ${ws}</div>` + items.map(it=>{
+          const c = catMap[it.cat] || {label:it.cat, color:'#888'};
+          const mark = it.status==='done'?'✅':it.status==='moved'?'↪':it.status==='dropped'?'✕':'○';
+          return `<div class="outcome-row">
+            <div class="om-head">${mark} ${it.text} <span class="om-agenda">· ${c.label} · ${it.status}</span></div>
+            ${it.result?`<div class="om-out">→ ${it.result}</div>`:''}
+          </div>`;
+        }).join('');
+      }).join('')
+    : `<div class="empty-note">No plans from before this upgrade.</div>`;
 }
 
-function renderPlanList(){
-  const box = document.getElementById('planList');
-  box.innerHTML = planItems.length ? planItems.map((it,i)=>{
-    const c = catMap[it.cat] || {label:it.cat, color:'#888'};
-    return `<div class="plan-item st-${it.status}">
-      <div>
-        <div class="pi-cat" style="color:${c.color};">${c.label}</div>
-        <div class="pi-text">${it.status==='done'?'✅ ':''}${it.text}</div>
-        ${it.result?`<div class="pi-result">→ ${it.result}</div>`:''}
-      </div>
-      <div class="pi-btns">
-        <button type="button" class="pi-btn ${it.status==='done'?'on-done':''}" data-i="${i}" data-st="done">Done</button>
-        <button type="button" class="pi-btn ${it.status==='moved'?'on-moved':''}" data-i="${i}" data-st="moved">Moved</button>
-        <button type="button" class="pi-btn ${it.status==='dropped'?'on-dropped':''}" data-i="${i}" data-st="dropped">Drop</button>
-        <button type="button" class="pi-btn" data-i="${i}" data-st="remove">✕</button>
-      </div>
-    </div>`;
-  }).join('') : `<div class="empty-note">No items planned for this week yet.</div>`;
+function renderTaskItem(it){
+  const c = catMap[it.cat] || {label:it.cat, color:'#888'};
+  const today = todayStr();
+  const overdue = it.dueDate && it.dueDate < today && (it.status==='planned'||it.status==='moved');
+  const badges = (it.assignedBy==='ceo' ? `<span class="tag-ceo">Assigned by CEO</span>` : '') +
+    (overdue ? `<span class="tag-overdue">Overdue</span>` : '') +
+    `<span class="tag-period">${it.period==='monthly'?'Monthly':'Weekly'}</span>`;
+  return `<div class="plan-item st-${it.status}">
+    <div>
+      <div class="pi-cat" style="color:${c.color};">${c.label} ${badges}</div>
+      <div class="pi-text">${it.status==='done'?'✅ ':''}${it.text}</div>
+      ${it.result?`<div class="pi-result">→ ${it.result}</div>`:''}
+    </div>
+    <div class="pi-btns">
+      <button type="button" class="pi-btn ${it.status==='done'?'on-done':''}" data-id="${it.id}" data-st="done">Done</button>
+      <button type="button" class="pi-btn ${it.status==='moved'?'on-moved':''}" data-id="${it.id}" data-st="moved">Moved</button>
+      <button type="button" class="pi-btn ${it.status==='dropped'?'on-dropped':''}" data-id="${it.id}" data-st="dropped">Drop</button>
+    </div>
+  </div>`;
+}
 
-  box.querySelectorAll('.pi-btn').forEach(btn=>btn.addEventListener('click', e=>{
-    const i = +e.currentTarget.dataset.i;
+function wireTaskButtons(container){
+  container.querySelectorAll('.pi-btn').forEach(btn=>btn.addEventListener('click', async e=>{
+    const id = e.currentTarget.dataset.id;
     const st = e.currentTarget.dataset.st;
-    if(st==='remove'){
-      if(confirm('Remove this planned item?')) { planItems.splice(i,1); renderPlanList(); }
-      return;
+    const task = tasksList.find(t=>t.id===id);
+    if(!task) return;
+    let status = st, result = task.result;
+    if(task.status===st){ status='planned'; result=''; }        // tap active status again to reopen
+    else if(st==='done'){
+      const res = prompt('What was the result / outcome of this task?', task.result||'');
+      if(res===null || !res.trim()){ alert('A Done task needs its result — same rule as daily blocks.'); return; }
+      result = res.trim();
+    } else { result = ''; }
+    // optimistic local update, then sync
+    const prevStatus = task.status, prevResult = task.result;
+    task.status = status; task.result = result;
+    renderTasks();
+    try{
+      await apiPost({action:'updateTaskStatus', taskId:id, status, result});
+    }catch(err){
+      task.status = prevStatus; task.result = prevResult; // roll back on failure
+      renderTasks();
+      alert('Could not save that change — check internet and try again.');
     }
-    if(planItems[i].status===st){
-      // clicking the active status reverts to planned
-      planItems[i].status='planned'; planItems[i].result='';
-    } else if(st==='done'){
-      const res = prompt('What was the result / outcome of this item?', planItems[i].result||'');
-      if(res===null || !res.trim()){ alert('A Done item needs its result — same rule as daily blocks.'); return; }
-      planItems[i].status='done'; planItems[i].result=res.trim();
-    } else {
-      planItems[i].status=st; planItems[i].result='';
-    }
-    renderPlanList();
   }));
 }
 
-document.getElementById('addPlanBtn').addEventListener('click', ()=>{
-  const text = document.getElementById('planText').value.trim();
-  const cat = document.getElementById('planCat').value;
-  if(!text){ alert('Write the planned item first.'); return; }
-  planItems.push({id:'pl_'+Date.now(), text, cat, status:'planned', result:''});
-  document.getElementById('planText').value='';
-  renderPlanList();
-});
-
-document.getElementById('planPrevWeek').addEventListener('click', ()=>{ planWeekOffset--; renderPlan(); });
-document.getElementById('planNextWeek').addEventListener('click', ()=>{ planWeekOffset++; renderPlan(); });
-
-document.getElementById('savePlanBtn').addEventListener('click', async ()=>{
-  if(!auth || auth.role!=='manager') return;
-  const btn = document.getElementById('savePlanBtn');
-  const st = document.getElementById('planStatus');
+document.getElementById('addTaskBtn').addEventListener('click', async ()=>{
+  const text = document.getElementById('taskText').value.trim();
+  const cat = document.getElementById('taskCat').value;
+  const period = document.getElementById('taskPeriod').value;
+  if(!text){ alert('Write the task first.'); return; }
+  const btn = document.getElementById('addTaskBtn');
+  const st = document.getElementById('taskStatus');
   btn.disabled = true;
-  st.innerHTML = `<div class="status-msg sync">Saving plan to Google Sheet…</div>`;
+  st.innerHTML = `<div class="status-msg sync">Saving…</div>`;
   try{
-    await apiPost({action:'savePlan', personId: auth.person.id, personName: auth.person.name, weekStart: planWeekKey(), items: planItems});
-    plansIndex[auth.person.id + '|' + planWeekKey()] = planItems.map(x=>Object.assign({},x));
-    st.innerHTML = `<div class="status-msg ok">Week plan saved.</div>`;
-    setTimeout(()=>{st.innerHTML='';}, 6000);
-  }catch(e){
-    st.innerHTML = `<div class="status-msg err">Save failed — check internet and tap Save again. Your items are still here.</div>`;
+    const res = await apiPost({action:'addTask', personId:auth.person.id, personName:auth.person.name, text, cat, period});
+    tasksList.push({id:res.taskId, personId:auth.person.id, personName:auth.person.name, text, cat, period,
+      assignedBy:'self', status:'planned', result:'', dueDate:res.dueDate, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()});
+    document.getElementById('taskText').value='';
+    st.innerHTML = `<div class="status-msg ok">Task added.</div>`;
+    setTimeout(()=>{st.innerHTML='';}, 4000);
+    renderTasks();
+  }catch(err){
+    st.innerHTML = `<div class="status-msg err">Could not save — check internet and try again.</div>`;
   }
   btn.disabled = false;
+});
+
+document.getElementById('taskResolvedToggle').addEventListener('click', ()=>{
+  const box = document.getElementById('taskResolvedList');
+  box.style.display = box.style.display==='none' ? 'block' : 'none';
+});
+document.getElementById('legacyPlanToggle').addEventListener('click', ()=>{
+  const box = document.getElementById('legacyPlanList');
+  box.style.display = box.style.display==='none' ? 'block' : 'none';
 });
 
 // ================= SHARED CALC HELPERS =================
@@ -1799,6 +1877,45 @@ function renderDashboard(){
 document.getElementById('dashView').addEventListener('change', renderDashboard);
 document.getElementById('dashWeeks').addEventListener('change', renderDashboard);
 
+// ================= CEO: ASSIGN TASK (v2.3) =================
+function populateAssignSelects(){
+  const pSel = document.getElementById('assignPerson');
+  const pPrev = pSel.value;
+  pSel.innerHTML = roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  pSel.value = pPrev; if(!pSel.value && roster.length) pSel.value = roster[0].id;
+  const cSel = document.getElementById('assignCat');
+  if(!cSel.options.length){
+    cSel.innerHTML = CATS.filter(c=>!c.hidden && ACC_CATS.has(c.k))
+      .map(c=>`<option value="${c.k}">${c.label}</option>`).join('');
+  }
+}
+
+document.getElementById('assignTaskBtn').addEventListener('click', async ()=>{
+  const personId = document.getElementById('assignPerson').value;
+  const person = roster.find(p=>p.id===personId);
+  const text = document.getElementById('assignText').value.trim();
+  const cat = document.getElementById('assignCat').value;
+  const period = document.getElementById('assignPeriod').value;
+  if(!person){ alert('Select a manager first — add one in Team List if the list is empty.'); return; }
+  if(!text){ alert('Write the task first.'); return; }
+  const btn = document.getElementById('assignTaskBtn');
+  const st = document.getElementById('assignStatus');
+  btn.disabled = true;
+  st.innerHTML = `<div class="status-msg sync">Assigning…</div>`;
+  try{
+    const res = await apiPost({action:'assignTask', personId:person.id, personName:person.name, text, cat, period});
+    tasksList.push({id:res.taskId, personId:person.id, personName:person.name, text, cat, period,
+      assignedBy:'ceo', status:'planned', result:'', dueDate:res.dueDate, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()});
+    document.getElementById('assignText').value='';
+    st.innerHTML = `<div class="status-msg ok">Assigned to ${person.name}.</div>`;
+    setTimeout(()=>{st.innerHTML='';}, 4000);
+    renderCEO();
+  }catch(err){
+    st.innerHTML = `<div class="status-msg err">Could not save — check internet and try again.</div>`;
+  }
+  btn.disabled = false;
+});
+
 // ================= CEO VIEW =================
 function renderCEO(){
   if(!roster.length){
@@ -1966,46 +2083,63 @@ function renderCEO(){
       <td>${r.topMin>0?`${r.topCat} (${fmtH(r.topMin)})`:'—'}</td>
     </tr>`).join('');
 
-  // ---- Plan vs Achieved ----
-  const thisMonday = thisWkDates[0];
-  const planRows = roster.map(p=>{
-    const items = plansIndex[p.id + '|' + thisMonday] || [];
-    const done = items.filter(x=>x.status==='done').length;
-    const moved = items.filter(x=>x.status==='moved').length;
-    const dropped = items.filter(x=>x.status==='dropped').length;
-    const donePct = items.length>0 ? Math.round(done/items.length*100) : null;
-    return {p, items, done, moved, dropped, donePct};
-  }).sort((a,b)=>b.items.length - a.items.length);
+  // ---- Task Backlog (v2.3) — all-time open, resolved windowed to last 30 days ----
+  populateAssignSelects();
+  const cutoffISO = (()=>{ const d=new Date(); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10); })();
+  const taskRows = roster.map(p=>{
+    const mine = tasksList.filter(t=>t.personId===p.id);
+    const open = mine.filter(t=>t.status==='planned'||t.status==='moved');
+    const doneRecent = mine.filter(t=>t.status==='done' && (t.updatedAt||'').slice(0,10) >= cutoffISO);
+    const dropped = mine.filter(t=>t.status==='dropped');
+    const overdue = open.filter(t=>t.dueDate && t.dueDate < todayStr());
+    const total = open.length + doneRecent.length;
+    const donePct = total>0 ? Math.round(doneRecent.length/total*100) : null;
+    return {p, mine, open, doneRecent, dropped, overdue, donePct};
+  }).sort((a,b)=>(b.open.length+b.overdue.length) - (a.open.length+a.overdue.length));
 
   document.getElementById('ceoPlanTable').innerHTML =
-    `<tr><th>Name</th><th>Planned</th><th>Done</th><th>Moved</th><th>Dropped</th><th>Done %</th></tr>` +
-    planRows.map(r=>`<tr>
+    `<tr><th>Name</th><th>Open</th><th>Overdue</th><th>Done (30d)</th><th>Dropped</th><th>Done %</th></tr>` +
+    taskRows.map(r=>`<tr>
       <td class="pred-name">${r.p.name}</td>
-      <td>${r.items.length||'—'}</td>
-      <td>${r.items.length?r.done:'—'}</td>
-      <td>${r.items.length?r.moved:'—'}</td>
-      <td>${r.items.length?r.dropped:'—'}</td>
-      <td>${r.donePct!==null?r.donePct+'%':'No plan'}</td>
+      <td>${r.open.length||'—'}</td>
+      <td>${r.overdue.length>0?`<strong style="color:#B03A2E;">${r.overdue.length}</strong>`:'—'}</td>
+      <td>${r.doneRecent.length||'—'}</td>
+      <td>${r.dropped.length||'—'}</td>
+      <td>${r.donePct!==null?r.donePct+'%':(r.mine.length?'—':'No tasks')}</td>
     </tr>`).join('');
 
-  // Drill-down: one manager's plan items (selection survives re-render)
+  // Drill-down: one manager's full task list, with a CEO-only delete button
   const planSel = document.getElementById('ceoPlanPerson');
   const planPrev = planSel.value || '';
   planSel.innerHTML = `<option value="">— Select manager —</option>` +
     roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   planSel.value = planPrev;
-  const chosen = planRows.find(r=>r.p.id===planSel.value);
+  const chosen = taskRows.find(r=>r.p.id===planSel.value);
+  const allSorted = chosen ? chosen.mine.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')) : [];
   document.getElementById('ceoPlanItems').innerHTML = !planSel.value ? '' :
-    (chosen && chosen.items.length
-      ? chosen.items.map(it=>{
+    (allSorted.length
+      ? allSorted.map(it=>{
           const c = catMap[it.cat] || {label:it.cat, color:'#888'};
           const mark = it.status==='done'?'✅':it.status==='moved'?'↪':it.status==='dropped'?'✕':'○';
-          return `<div class="outcome-row">
-            <div class="om-head">${mark} ${it.text} <span class="om-agenda">· ${c.label} · ${it.status}</span></div>
-            ${it.result?`<div class="om-out">→ ${it.result}</div>`:''}
+          const overdue = it.dueDate && it.dueDate < todayStr() && (it.status==='planned'||it.status==='moved');
+          return `<div class="outcome-row" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div>
+              <div class="om-head">${mark} ${it.text} <span class="om-agenda">· ${c.label} · ${it.status}${it.assignedBy==='ceo'?' · assigned by you':''}${overdue?' · <strong style="color:#B03A2E;">overdue</strong>':''}</span></div>
+              ${it.result?`<div class="om-out">→ ${it.result}</div>`:''}
+            </div>
+            <button type="button" class="ceo-del-btn" data-id="${it.id}" title="Delete this task">✕</button>
           </div>`;
         }).join('')
-      : `<div class="empty-note">No plan saved by this manager for this week.</div>`);
+      : `<div class="empty-note">No tasks — assigned or self-added — for this manager.</div>`);
+  document.querySelectorAll('.ceo-del-btn').forEach(btn=>btn.addEventListener('click', async e=>{
+    const id = e.currentTarget.dataset.id;
+    if(!confirm('Delete this task permanently? This cannot be undone.')) return;
+    try{
+      await apiPost({action:'deleteTask', taskId:id});
+      tasksList = tasksList.filter(t=>t.id!==id);
+      renderCEO();
+    }catch(err){ alert('Could not delete — check internet and try again.'); }
+  }));
 
   // ---- Needs Attention ----
   const flags = [];
@@ -2033,13 +2167,14 @@ function renderCEO(){
   Object.entries(noOutBy).forEach(([name,n])=>{
     flags.push({name, msg:`${n} logged block${n>1?'s':''} this week with no outcome recorded — what did the time produce?`});
   });
-  // Planner discipline: no plan by mid-week, or low completion late in the week
-  planRows.forEach(r=>{
-    if(r.items.length===0 && elapsed>=3){
-      flags.push({name:r.p.name, msg:`No week plan saved (${elapsed} days in) — running on incoming work, not priorities.`});
-    }
-    if(r.items.length>=3 && elapsed>=5 && r.donePct!==null && r.donePct<50){
-      flags.push({name:r.p.name, msg:`Only ${r.donePct}% of planned items done by day ${elapsed} — overcommitted or blocked?`});
+  // Task backlog discipline: nothing on the list at all, or overdue items piling up
+  taskRows.forEach(r=>{
+    if(r.mine.length===0){
+      flags.push({name:r.p.name, msg:`No tasks in the system at all — running on incoming work, not priorities.`});
+    } else if(r.overdue.length>0){
+      flags.push({name:r.p.name, msg:`${r.overdue.length} task${r.overdue.length>1?'s':''} overdue — worth a check-in.`});
+    } else if(r.open.length>=3 && r.donePct!==null && r.donePct<50){
+      flags.push({name:r.p.name, msg:`Only ${r.donePct}% of the recent task backlog resolved — overcommitted or blocked?`});
     }
   });
   document.getElementById('ceoFlags').innerHTML = flags.length
@@ -2252,8 +2387,20 @@ function renderCal(){
 // ---- TUNING: these lines are the whole policy. Change them, nothing else. ---
 const MIN_OUTCOME_CHARS = 15;   // "done" / "ok" is not an outcome
 const MIN_PLAN_ITEMS    = 3;    // planning 2 easy items cannot score 100%
-const SCORE_W = { exec: 0.50, outcome: 0.30, discipline: 0.20 }; // hours excluded on purpose
+// Utilization now carries real weight — a full day at low output beats a
+// single great task in a mostly-empty day, the way it should. Weights sum to 1.
+const SCORE_W = { exec: 0.30, outcome: 0.25, discipline: 0.15, utilization: 0.30 };
 const SPOTLIGHT_MIN_MIN = 240;  // need 4h+ logged in the week to be eligible
+// Standard workday: 9h shift minus a 20-minute lunch = 520 minutes of expected
+// logged work per day. Below 60% of that, the score is hard-capped at the
+// utilization percentage itself — no combination of a good outcome or a tidy
+// plan can buy back a mostly-empty day. This is the Tesla-style "hours you
+// actually put in" gate: quality of the few hours logged never substitutes
+// for the hours that were never logged at all.
+const WORKDAY_TOTAL_MIN = 540;      // 9 hours
+const LUNCH_MIN          = 20;
+const EXPECTED_WORK_MIN  = WORKDAY_TOTAL_MIN - LUNCH_MIN; // 520 min/day
+const UTIL_GATE          = 0.60;    // below this, score <= utilization%
 // What one hour of each activity is worth. Travel is real work but buys
 // nothing — it is the number a leader can actually shrink by batching visits.
 const LEVERAGE = {
@@ -2265,8 +2412,8 @@ const BREAK_CATS = new Set(['lunch','tea']); // not work — kept out of every r
 // ---- Board data: aggregate numbers for everyone. No outcome text, no
 // agendas, no "with whom", no notes — so a manager can see that a colleague
 // scored 82 without being able to read what that colleague did.
-let boardDays = {};    // 'pid|date'      -> {cats,n,acc,out,maxDur,accMin}
-let boardPlans = {};   // 'pid|weekStart' -> {planned,done}
+let boardDays = {};    // 'pid|date' -> {cats,n,acc,out,maxDur,accMin}
+let boardTasks = {};   // 'pid'      -> {done,open,overdue} — cumulative, windowed server-side
 let boardPeople = [];  // [{id,name,role,type}]
 
 async function refreshBoard(){
@@ -2276,9 +2423,9 @@ async function refreshBoard(){
       '&pin=' + encodeURIComponent(auth.pin) + '&t=' + Date.now(), {cache:'no-store'});
     const data = await res.json();
     if(!data.ok) return false;
-    boardDays = {}; boardPlans = {};
-    (data.days  || []).forEach(x=>{ boardDays[x.pid + '|' + x.d]  = x; });
-    (data.plans || []).forEach(x=>{ boardPlans[x.pid + '|' + x.ws] = x; });
+    boardDays = {}; boardTasks = {};
+    (data.days  || []).forEach(x=>{ boardDays[x.pid + '|' + x.d] = x; });
+    (data.tasks || []).forEach(x=>{ boardTasks[x.pid] = x; });
     boardPeople = data.people || [];
     return true;
   }catch(e){ return false; }
@@ -2312,9 +2459,13 @@ function personWeek(pid, offset){
     if((r.maxDur || 0) > maxDur) maxDur = r.maxDur;
   });
 
-  const plan = boardPlans[pid + '|' + dates[0]] || null;
-  const planned = plan ? plan.planned : 0;
-  const done    = plan ? plan.done    : 0;
+  // Execution now reads the rolling task backlog (see readBoardTasks in
+  // Code.gs): open tasks always count against you until resolved; resolved
+  // tasks age out after 30 days so the ratio reflects recent cadence.
+  const bt = boardTasks[pid] || {done:0, open:0, overdue:0};
+  const planned = bt.done + bt.open;
+  const done    = bt.done;
+  const overdue = bt.overdue;
 
   // A short plan cannot reach 100% — 2 planned / 2 done scores 67%, not 100%.
   const exec       = planned > 0 ? Math.min(1, done / Math.max(planned, MIN_PLAN_ITEMS)) : null;
@@ -2323,15 +2474,29 @@ function personWeek(pid, offset){
   const leverage   = workMin > 0 ? levSum / workMin : null;
   const focusAvg   = accTot  > 0 ? accMin / accTot : null;
 
+  // Hours actually logged vs. a standard 9h day minus 20min lunch (520 min),
+  // averaged over the days elapsed this week — not just days submitted, so
+  // a skipped day hurts this exactly like it hurts discipline.
+  const utilization = elapsed > 0 ? Math.min(1, workMin / (EXPECTED_WORK_MIN * elapsed)) : null;
+
   const hasData = totalMin > 0 || planned > 0;
-  const score = hasData ? Math.round(100 * (
-      SCORE_W.exec       * (exec       === null ? 0 : exec) +
-      SCORE_W.outcome    * (outcome    === null ? 0 : outcome) +
-      SCORE_W.discipline * (discipline === null ? 0 : discipline)
+  const rawScore = hasData ? Math.round(100 * (
+      SCORE_W.exec        * (exec        === null ? 0 : exec) +
+      SCORE_W.outcome     * (outcome     === null ? 0 : outcome) +
+      SCORE_W.discipline  * (discipline  === null ? 0 : discipline) +
+      SCORE_W.utilization * (utilization === null ? 0 : utilization)
     )) : null;
 
+  // The gate: log under 60% of a standard day and the score is capped at
+  // that same percentage, whatever the quality of the hours you did log.
+  // This is what stops "one great 2-hour task" from outscoring a full day.
+  const score = (rawScore !== null && utilization !== null && utilization < UTIL_GATE)
+    ? Math.min(rawScore, Math.round(100 * utilization))
+    : rawScore;
+
   return {dates, elapsed, catMin, totalMin, workMin, accTot, outTot, accMin, blocks,
-          maxDur, days, planned, done, exec, outcome, discipline, leverage, focusAvg, score};
+          maxDur, days, planned, done, overdue, exec, outcome, discipline, leverage,
+          focusAvg, utilization, score};
 }
 
 // ---- Your own best weeks become the benchmark. No invented targets.
@@ -2363,7 +2528,34 @@ function scoreMoves(pid){
   const moves = [];
   const P = v => Math.round(100 * v); // points, since score is already 0-100
 
-  // 1. Finish what is already planned
+  // 0. Hours logged vs. the standard day — usually the single biggest lever,
+  // and the ONLY one that can be capped by the gate (see personWeek). Gain is
+  // computed honestly: what the score would be at full utilization, minus
+  // what it is now — so this number stays true even when the gate is active.
+  if(s.utilization !== null && s.utilization < 1){
+    const weighted = v => (
+      SCORE_W.exec        * (s.exec        === null ? 0 : s.exec) +
+      SCORE_W.outcome     * (s.outcome     === null ? 0 : s.outcome) +
+      SCORE_W.discipline  * (s.discipline  === null ? 0 : s.discipline) +
+      SCORE_W.utilization * v
+    );
+    const atFull = Math.round(100 * weighted(1));
+    const gain = Math.max(0, atFull - (s.score||0));
+    if(gain > 0){
+      const missingMin = Math.max(0, Math.round(EXPECTED_WORK_MIN*s.elapsed - s.workMin));
+      moves.push({
+        gain,
+        title: s.utilization < UTIL_GATE
+          ? `Log more hours — you're at ${Math.round(s.utilization*100)}% of a standard day, which caps your score`
+          : `Close the gap to a full day — ${fmtH(missingMin)} short of the standard so far`,
+        sub: s.utilization < UTIL_GATE
+          ? `Below ${Math.round(UTIL_GATE*100)}% of the expected ${fmtH(EXPECTED_WORK_MIN)}/day, the score can't exceed your utilization percentage, however good the outcomes are on what you did log.`
+          : `Worth up to ${gain} points once every day this week reaches the standard ${fmtH(EXPECTED_WORK_MIN)}.`
+      });
+    }
+  }
+
+  // 1. Finish what is already open in your task list
   if(s.planned > 0 && s.done < s.planned){
     const denom = Math.max(s.planned, MIN_PLAN_ITEMS);
     const remaining = s.planned - s.done;
@@ -2371,7 +2563,7 @@ function scoreMoves(pid){
     const all = Math.min(SCORE_W.exec - SCORE_W.exec * (s.done/denom), perItem * remaining);
     moves.push({
       gain: P(all),
-      title: `Close your ${remaining} open plan item${remaining>1?'s':''}`,
+      title: `Close your ${remaining} open task${remaining>1?'s':''}`,
       sub: `Each one is worth ${P(perItem)} points. This is the biggest single lever you have.`
     });
   }
@@ -2398,19 +2590,19 @@ function scoreMoves(pid){
     });
   }
 
-  // 4. No plan at all — the single biggest hole
+  // 4. No open tasks at all — the single biggest hole
   if(s.planned === 0){
     moves.push({
       gain: P(SCORE_W.exec),
-      title: `Save a week plan with at least ${MIN_PLAN_ITEMS} items`,
-      sub: `Half the score is plan-versus-delivered. With no plan saved, you forfeit all of it.`
+      title: `Add at least ${MIN_PLAN_ITEMS} tasks to My Week`,
+      sub: `A third of the score is task backlog resolved-versus-open. With nothing on your list, you forfeit all of it.`
     });
   } else if(s.planned < MIN_PLAN_ITEMS){
     const gain = SCORE_W.exec * (s.done/MIN_PLAN_ITEMS) * ((MIN_PLAN_ITEMS/s.planned) - 1);
     moves.push({
       gain: P(Math.max(0, Math.min(gain, SCORE_W.exec - SCORE_W.exec*(s.done/MIN_PLAN_ITEMS)))),
-      title: `Add ${MIN_PLAN_ITEMS - s.planned} more item${(MIN_PLAN_ITEMS-s.planned)>1?'s':''} to your plan`,
-      sub: `A plan shorter than ${MIN_PLAN_ITEMS} items can't reach full marks, however much of it you finish.`
+      title: `Add ${MIN_PLAN_ITEMS - s.planned} more task${(MIN_PLAN_ITEMS-s.planned)>1?'s':''} to My Week`,
+      sub: `A backlog shorter than ${MIN_PLAN_ITEMS} tasks can't reach full marks, however much of it you finish.`
     });
   }
 
@@ -2455,12 +2647,24 @@ function focusInsights(pid){
   const out  = [];
   const share = (w,k)=> w.workMin > 0 ? (w.catMin[k] || 0) / w.workMin * 100 : 0;
 
+  if(cur.utilization !== null && cur.utilization < UTIL_GATE){
+    out.push({tone:'warn', title:`Only ${Math.round(cur.utilization*100)}% of a standard day logged this week`,
+      body:`Below ${Math.round(UTIL_GATE*100)}% of the expected ${fmtH(EXPECTED_WORK_MIN)}/day, your score is capped at that percentage — a great outcome on one task can't buy back a mostly-empty day.`});
+  } else if(cur.utilization !== null && cur.utilization < 0.85){
+    out.push({tone:'watch', title:`${Math.round(cur.utilization*100)}% of a standard day logged this week`,
+      body:`A full day is ${fmtH(EXPECTED_WORK_MIN)} (9h minus a 20-min lunch). Closing this gap is worth real points — see Move My Score.`});
+  }
+
   if(cur.planned === 0){
-    out.push({tone:'warn', title:'No week plan saved',
-      body:'Half your score is plan-vs-done. With no plan the week runs on whatever walks in. Add 3–7 items in My Week.'});
+    out.push({tone:'warn', title:'No tasks in My Week',
+      body:'Part of your score is task backlog resolved-vs-open. With nothing on your list, add 3–7 tasks in My Week.'});
   } else if(cur.planned < MIN_PLAN_ITEMS){
-    out.push({tone:'watch', title:`Only ${cur.planned} item${cur.planned>1?'s':''} planned this week`,
-      body:`The score assumes at least ${MIN_PLAN_ITEMS} planned items, so a short plan can't reach 100%. Add what else has to happen.`});
+    out.push({tone:'watch', title:`Only ${cur.planned} task${cur.planned>1?'s':''} on your list`,
+      body:`The score assumes at least ${MIN_PLAN_ITEMS} tasks, so a short backlog can't reach 100%. Add what else has to happen.`});
+  }
+  if(cur.overdue > 0){
+    out.push({tone:'warn', title:`${cur.overdue} task${cur.overdue>1?'s are':' is'} overdue`,
+      body:`Past its due date and still open. Close it, or mark it Moved if the date genuinely has to shift.`});
   }
 
   if(cur.outcome !== null && cur.outcome < 0.7){
@@ -2636,7 +2840,8 @@ renderMyStats = async function(){
 
   document.getElementById('myKpis').innerHTML = `
     <div class="kpi"><div class="num">${s.score !== null ? s.score : '—'}</div><div class="lbl">Productivity Score</div></div>
-    <div class="kpi"><div class="num">${s.planned ? s.done + '/' + s.planned : '—'}</div><div class="lbl">Plan Delivered</div></div>
+    <div class="kpi"><div class="num">${pctOrDash(s.utilization)}</div><div class="lbl">Hours vs Standard Day</div></div>
+    <div class="kpi"><div class="num">${s.planned ? s.done + '/' + s.planned : '—'}</div><div class="lbl">Tasks Resolved</div></div>
     <div class="kpi"><div class="num">${pctOrDash(s.outcome)}</div><div class="lbl">Outcomes Recorded</div></div>
     <div class="kpi"><div class="num">${pctOrDash(s.leverage)}</div><div class="lbl">Leverage Mix</div></div>
     <div class="kpi"><div class="num">${pctOrDash(s.discipline)}</div><div class="lbl">Discipline</div></div>
