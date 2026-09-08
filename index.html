@@ -1030,7 +1030,22 @@ function fmt12(t){
 }
 
 // ================= LOGIN =================
+// v2: localStorage, not sessionStorage — a saved login now survives closing
+// the tab, switching apps, or a phone restarting. sessionStorage was tied to
+// one tab's lifetime, and mobile browsers routinely discard backgrounded
+// tabs to save memory; reopening one then counted as a brand-new session,
+// which is exactly the "refresh sends me back to login" complaint.
+// A soft 30-day expiry stops a saved login sitting forever on a device that
+// later changes hands.
 const AUTH_KEY = 'dgr_auth_v2';
+const AUTH_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function saveAuth(a){
+  localStorage.setItem(AUTH_KEY, JSON.stringify({...a, savedAt: Date.now()}));
+}
+function clearAuth(){
+  localStorage.removeItem(AUTH_KEY);
+}
 
 async function tryLogin(loginId, pin, silent){
   const btn = document.getElementById('loginBtn');
@@ -1039,12 +1054,12 @@ async function tryLogin(loginId, pin, silent){
   try{
     const data = await apiGet(loginId, pin);
     auth = {loginId, pin, role: data.role, person: data.person};
-    sessionStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+    saveAuth(auth);
     ingest(data);
     enterApp();
   }catch(e){
     auth = null;
-    sessionStorage.removeItem(AUTH_KEY);
+    clearAuth();
     if(String(e.message) === 'INVALID_PIN'){
       err.textContent = silent ? '' : 'Wrong PIN for that name. Try again.';
     } else {
@@ -1068,7 +1083,7 @@ document.getElementById('pinInput').addEventListener('keydown', e=>{
 
 document.getElementById('logoutBtn').addEventListener('click', ()=>{
   auth = null;
-  sessionStorage.removeItem(AUTH_KEY);
+  clearAuth();
   document.getElementById('pinInput').value = '';
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'block';
@@ -2920,11 +2935,13 @@ renderCEO = async function(){
 // ================= INIT =================
 (function init(){
   loadLoginNames();
-  const saved = sessionStorage.getItem(AUTH_KEY);
+  const saved = localStorage.getItem(AUTH_KEY);
   if(saved){
     try{
       const a = JSON.parse(saved);
-      if(a && a.pin && a.loginId){ tryLogin(a.loginId, a.pin, true); return; }
+      const fresh = a && a.savedAt && (Date.now() - a.savedAt) < AUTH_MAX_AGE_MS;
+      if(a && a.pin && a.loginId && fresh){ tryLogin(a.loginId, a.pin, true); return; }
+      if(a && !fresh) clearAuth(); // quietly expired — no error, just re-show login
     }catch(e){}
   }
   document.getElementById('loginScreen').style.display = 'block';
