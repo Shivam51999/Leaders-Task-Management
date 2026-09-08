@@ -902,6 +902,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzfInhfIbpP1NsL6pM16C7U
 
 let auth = null;          // {loginId, pin, role:'ceo'|'manager', person:{id,name,role,type}|null}
 let logsIndex = {};       // `${personId}|${date}` -> blocks array
+let logsSavedAt = {};     // `${personId}|${date}` -> ISO timestamp of last save (for advance-logging detection)
 let plansIndex = {};      // `${personId}|${weekStart}` -> legacy plan items array (v2.2, history only)
 let tasksList = [];        // own tasks (manager) or everyone's (CEO) — v2.3, live
 
@@ -951,8 +952,10 @@ async function apiPost(payload){
 function ingest(data){
   roster = data.roster || [];
   logsIndex = {};
+  logsSavedAt = {};   // 'pid|date' -> ISO timestamp of when that day was last saved
   (data.logs || []).forEach(l=>{
     logsIndex[l.personId + '|' + l.date] = l.blocks || [];
+    if(l.savedAt) logsSavedAt[l.personId + '|' + l.date] = l.savedAt;
   });
   plansIndex = {};
   (data.plans || []).forEach(pl=>{
@@ -1649,6 +1652,27 @@ function getBlocks(personId, date){
   return logsIndex[personId + '|' + date] || null;
 }
 
+// A block whose END TIME is well after the moment that day was saved could
+// not have actually happened yet — it was written in advance, not logged.
+// (SavedAt only grows across the day since every save rewrites the whole
+// day's row, so a legitimately incremental or end-of-day log never trips
+// this — only a block describing something that, as of the save, hadn't
+// happened yet.) 15 minutes of slack absorbs normal click-a-bit-late lag.
+const ADVANCE_LOG_TOLERANCE_MIN = 15;
+
+function advanceLoggedBlocks(personId, date){
+  const savedAt = logsSavedAt[personId + '|' + date];
+  if(!savedAt) return [];               // no timestamp on record — nothing to check
+  const savedMs = new Date(savedAt).getTime();
+  if(isNaN(savedMs)) return [];
+  const blocks = getBlocks(personId, date) || [];
+  return blocks.filter(b=>{
+    const endMs = new Date(date + 'T' + b.end + ':00').getTime();
+    if(isNaN(endMs)) return false;
+    return (endMs - savedMs) / 60000 > ADVANCE_LOG_TOLERANCE_MIN;
+  });
+}
+
 function weekStats(personIds, dates){
   let totalMin=0, idleMin=0, catMin={}; CATS.forEach(c=>catMin[c.k]=0);
   let submittedCount=0;
@@ -1764,13 +1788,17 @@ function showDetailModal(person, date, blks){
     body = `<div class="empty-note">No report submitted for this day.</div>`;
   } else {
     const total = blks.reduce((s,b)=>s+b.dur,0);
+    const advanceSet = new Set(advanceLoggedBlocks(person.id, date).map(b=>b.start+'|'+b.end+'|'+b.cat));
     body = blks.map(b=>{
       const c = catMap[b.cat];
       const detail = (b.who||b.agenda)
         ? `<div class="meta">👥 ${b.who||'—'} · ${b.agenda||'—'}<br>→ ${b.outcome||'—'}</div>`
         : (b.outcome ? `<div class="meta">→ ${b.outcome}</div>` : '');
-      return `<div class="block-item" style="border-left-color:${c.color}">
-        <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})${b.site?' · '+b.site:''}</div>${detail}</div>
+      const isAdvance = advanceSet.has(b.start+'|'+b.end+'|'+b.cat);
+      const advanceNote = isAdvance
+        ? `<div class="meta" style="color:#B03A2E;font-weight:600;">⚠ Logged before this block would have ended — check whether this day was filled in advance.</div>` : '';
+      return `<div class="block-item" style="border-left-color:${c.color}${isAdvance?';background:rgba(176,58,46,.05)':''}">
+        <div><strong>${c.label}</strong>${b.note?' — '+b.note:''}<div class="meta">${fmt12(b.start)}–${fmt12(b.end)} (${fmtHM(b.dur)}${b.split?' · shared slot':''})${b.site?' · '+b.site:''}</div>${detail}${advanceNote}</div>
       </div>`;
     }).join('') + `<div class="total-line"><span>Total</span><span>${fmtHM(total)}</span></div>`;
   }
@@ -2222,6 +2250,16 @@ function renderCEO(){
     const pMeetMin = (r.s.catMin['meeting']||0) + (r.s.catMin['ho']||0) + (r.s.catMin['call']||0);
     if(r.s.totalMin >= 240 && pMeetMin/r.s.totalMin > 0.40)
       flags.push({name:r.p.name, msg:`${Math.round(pMeetMin/r.s.totalMin*100)}% of the week in meetings — is delegation possible?`});
+    // Blocks whose end time is well after the day was saved couldn't have
+    // happened yet — the day was filled in advance, not logged as it went.
+    let advanceCount = 0, advanceDays = 0;
+    thisWkDates.forEach(d=>{
+      const hit = advanceLoggedBlocks(r.p.id, d);
+      if(hit.length){ advanceCount += hit.length; advanceDays++; }
+    });
+    if(advanceCount > 0){
+      flags.push({name:r.p.name, msg:`${advanceCount} block${advanceCount>1?'s':''} across ${advanceDays} day${advanceDays>1?'s':''} logged well before they'd have finished — check whether the day is being filled in advance.`});
+    }
   });
   // Logged work with no outcome recorded — accountability gap, per person
   const noOutBy = {};
