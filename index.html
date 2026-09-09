@@ -50,6 +50,19 @@ body{
   margin:0 auto;
   padding:18px 14px 60px;
 }
+/* ---- Laptop/desktop adaptation ----
+   Mobile is untouched below this breakpoint — everything above is exactly
+   as it was. Above it: the shell widens so CEO-facing screens (tables, the
+   Calendar grid, KPI strips that already flex-wrap) get real room instead
+   of sitting in a narrow column with huge empty gutters either side. The
+   manager's data-entry screens (My Day's wheel pickers, My Week, My Stats)
+   stay capped at a comfortable reading/typing width and re-center within
+   the wider shell, rather than stretching a form meant to be typed into
+   across a whole monitor. */
+@media (min-width:900px){
+  .wrap{ max-width:1180px; padding-left:28px; padding-right:28px; }
+  #tab-log, #tab-plan, #tab-mystats{ max-width:680px; margin:0 auto; }
+}
 header.top{
   display:flex;
   align-items:baseline;
