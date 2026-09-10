@@ -1274,6 +1274,19 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   if(!start || !end){ alert('Set the From and To time.'); return; }
   const dur = timeToMin(end) - timeToMin(start);
   if(dur <= 0){ alert('End time must be after start time.'); return; }
+  // A given wall-clock minute can only belong to one block — you can't be in
+  // a meeting AND traveling for the same 30 minutes. Reject any block whose
+  // time range overlaps one already added for this day (touching boundaries,
+  // e.g. one ending at 11:00 and the next starting at 11:00, are fine).
+  const newStartMin = timeToMin(start), newEndMin = timeToMin(end);
+  const clash = blocks.find(b=>{
+    const bs = timeToMin(b.start), be = timeToMin(b.end);
+    return newStartMin < be && bs < newEndMin;
+  });
+  if(clash){
+    alert(`That overlaps with ${catMap[clash.cat].label} (${fmt12(clash.start)}–${fmt12(clash.end)}), already logged for this day. Adjust the time so it doesn't double-count those minutes.`);
+    return;
+  }
   // Meetings and phone calls must carry accountability: with whom, agenda, outcome
   const isMeeting = cats.includes('meeting') || cats.includes('call');
   const who = document.getElementById('blkWho').value.trim();
