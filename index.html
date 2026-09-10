@@ -1762,6 +1762,7 @@ document.getElementById('nextWeek').addEventListener('click', ()=>{weekOffset++;
 
 function renderTeamGrid(){
   const dates = weekDates(weekOffset);
+  const elapsed = weekOffset === 0 ? daysElapsedThisWeek() : 7;
   const mon = new Date(dates[0]), sun = new Date(dates[6]);
   document.getElementById('weekLabel').textContent = `${mon.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${sun.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}`;
 
@@ -1804,7 +1805,7 @@ function renderTeamGrid(){
     });
   });
 
-  renderInsights(dataByPerson, dates);
+  renderInsights(dataByPerson, dates, elapsed);
 }
 
 function showDetailModal(person, date, blks){
@@ -1840,7 +1841,7 @@ function showDetailModal(person, date, blks){
   document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') root.innerHTML=''; });
 }
 
-function renderInsights(dataByPerson, dates){
+function renderInsights(dataByPerson, dates, elapsed){
   const box = document.getElementById('insights');
   const rows = roster.map(p=>{
     let submitted=0, siteMin=0, idleMin=0, totalMin=0;
@@ -1861,12 +1862,18 @@ function renderInsights(dataByPerson, dates){
     box.innerHTML = `<div class="empty-note">No reports yet this week.</div>`;
     return;
   }
+  // Judge attendance against days that have actually happened, not a fixed
+  // 7 — a week in progress can't have 5 submissions yet by day 2 or 3. Same
+  // "tolerate up to 2 missed days" allowance as before, just gated by how
+  // much of the week has elapsed: on a completed week (elapsed=7) this is
+  // identical to the original rule (flag under 5/7).
+  const minDays = Math.max(0, elapsed - 2);
   box.innerHTML = rows.map(r=>{
-    const flag = r.submitted < 5 || r.idleMin > 300;
+    const flag = r.submitted < minDays || r.idleMin > 300;
     return `<div class="insight-row">
       <div class="insight-name">${r.name}</div>
       <div class="insight-val">
-        ${r.submitted}/7 days · site ${(r.siteMin/60).toFixed(1)}h · breaks/other ${(r.idleMin/60).toFixed(1)}h
+        ${r.submitted}/${elapsed} days · site ${(r.siteMin/60).toFixed(1)}h · breaks/other ${(r.idleMin/60).toFixed(1)}h
         <span class="pill ${flag?'warn':'ok'}">${flag?'CHECK':'OK'}</span>
       </div>
     </div>`;
