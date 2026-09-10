@@ -962,6 +962,17 @@ async function apiPost(payload){
   return data;
 }
 
+// A save that failed because another save was mid-flight (rare, but more
+// likely when several managers save around the same time) needs a
+// different message than a real network problem — "check your internet"
+// is actively misleading when the fix is just "tap again in a second."
+function saveErrorMessage(err){
+  const msg = (err && err.message) || '';
+  return /busy/i.test(msg)
+    ? 'The system was busy saving someone else\u2019s update. Please tap again \u2014 your entry was not lost.'
+    : 'Could not save \u2014 check internet and try again.';
+}
+
 function ingest(data){
   roster = data.roster || [];
   logsIndex = {};
@@ -1615,7 +1626,7 @@ function wireLegacyPlanButtons(container){
     }catch(err){
       it.status = prevStatus; it.result = prevResult;
       renderTasks();
-      alert('Could not save that change — check internet and try again.');
+      alert(saveErrorMessage(err));
     }
   }));
 }
@@ -1663,7 +1674,7 @@ function wireTaskButtons(container){
     }catch(err){
       task.status = prevStatus; task.result = prevResult; // roll back on failure
       renderTasks();
-      alert('Could not save that change — check internet and try again.');
+      alert(saveErrorMessage(err));
     }
   }));
 }
@@ -1686,7 +1697,7 @@ document.getElementById('addTaskBtn').addEventListener('click', async ()=>{
     setTimeout(()=>{st.innerHTML='';}, 4000);
     renderTasks();
   }catch(err){
-    st.innerHTML = `<div class="status-msg err">Could not save — check internet and try again.</div>`;
+    st.innerHTML = `<div class="status-msg err">${saveErrorMessage(err)}</div>`;
   }
   btn.disabled = false;
 });
@@ -2081,7 +2092,7 @@ document.getElementById('assignTaskBtn').addEventListener('click', async ()=>{
     setTimeout(()=>{st.innerHTML='';}, 4000);
     renderCEO();
   }catch(err){
-    st.innerHTML = `<div class="status-msg err">Could not save — check internet and try again.</div>`;
+    st.innerHTML = `<div class="status-msg err">${saveErrorMessage(err)}</div>`;
   }
   btn.disabled = false;
 });
@@ -2313,7 +2324,7 @@ function renderCEO(){
       await apiPost({action:'deleteTask', taskId:id});
       tasksList = tasksList.filter(t=>t.id!==id);
       renderCEO();
-    }catch(err){ alert('Could not delete — check internet and try again.'); }
+    }catch(err){ alert(saveErrorMessage(err)); }
   }));
 
   // ---- Needs Attention ----
