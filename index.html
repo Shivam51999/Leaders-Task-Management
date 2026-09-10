@@ -674,7 +674,7 @@ table.grid-table td{
       <div class="kpi-strip" id="myKpis"></div>
       <span class="eyebrow">My productivity score — last 6 weeks + projection</span>
       <div class="chart-box"><canvas id="myTrendChart" height="180"></canvas></div>
-      <div class="hint" id="myStatsHint">Productivity Score = task backlog resolved (30%) + outcomes recorded (25%) + reporting discipline (15%) + hours vs a standard 9h day minus 20-min lunch (30%). Log under 60% of a standard day and the score is capped at that percentage, whatever the quality of the hours you did log. Dashed segment is a projection from your recent trend.</div>
+      <div class="hint" id="myStatsHint">Productivity Score = task backlog resolved (30%) + genuine outcomes recorded (25%) + reporting discipline (15%) + hours vs a standard 9h day minus 20-min lunch (30%). Log under 60% of a standard day and the score is capped at that percentage, whatever the quality of the hours you did log. Log meaningfully beyond a standard day and up to +10 bonus points are added on top — real extra hours are recognised, not just tolerated. "Meeting done"-style outcomes with no real substance don't count as recorded. Dashed segment is a projection from your recent trend.</div>
     </div>
 
     <!-- v2.3: what would actually move the number -->
@@ -1025,6 +1025,51 @@ const ACC_CATS = new Set(['meeting','ho','call','approval','site','culture','des
 // Site / office list for the "Site" dropdown. Edit this list as projects
 // launch or close — 'Other' must stay last.
 const SITES = ['HO / Office','Mithila','Miraya','Mithila-2','Momento','Starview','Shyni','Niyoshi Park','Melizma','Aikyam','Marvel','Midas','Old Project','Other'];
+
+// ---- Generic-outcome detector ----------------------------------------------
+// A length check alone lets "Meeting done" or "Discussed as usual" pass as a
+// real outcome — plenty of characters, zero information. This flags outcomes
+// that are just a formal box-tick: a known filler phrase, or a category name
+// restated with a completion word and nothing substantive added. A number
+// (an amount, a date, a count) or a real project/site name is treated as
+// strong evidence of substance even in a short outcome, since those are hard
+// to fabricate believably and are useful even when terse.
+// NOTE: this is a heuristic run over text already visible to whoever calls
+// it — never sent anywhere, same privacy boundary as everything else here.
+const GENERIC_OUTCOME_EXACT = new Set([
+  'done','ok','okay','fine','good','over','finished','resolved','sorted','handled','completed',
+  'meeting done','meeting completed','meeting held','meeting over','meeting concluded','meeting finished',
+  'call done','call completed','call over','call finished',
+  'discussion done','discussed','discussion held','as discussed',
+  'task done','task completed','work done','work completed',
+  'visit done','site visited','visit completed','site visit done',
+  'all good','no issues','routine','as usual','in progress','ongoing','pending',
+  'will update','noted','update taken','review done','review completed','approved','approval done'
+]);
+const GENERIC_FILLER_WORDS = new Set([
+  'done','completed','held','over','finished','concluded','resolved','sorted','handled',
+  'ok','okay','fine','good','all','routine','usual','as',
+  'work','task','call','visit','visited','site','meeting','discussion','discussed','review','update','updated','taken',
+  'scheduled','today','yesterday','tomorrow','now','already','again','still','planned',
+  'the','a','an','and','with','for','to','of','on','at','was','is','were','it','this','that'
+]);
+function looksGenericOutcome(text, catLabel){
+  if(!text) return true;
+  const norm = text.toLowerCase().replace(/[^\w\s₹]/g,' ').replace(/\s+/g,' ').trim();
+  if(!norm) return true;
+  if(GENERIC_OUTCOME_EXACT.has(norm)) return true;
+  const hasDigit = /\d/.test(norm);
+  const mentionsSite = SITES.some(s=> s!=='Other' && s!=='HO / Office' && norm.includes(s.toLowerCase()));
+  if(hasDigit || mentionsSite) return false;   // a number or a named site is real substance
+  const catWords = (catLabel||'').toLowerCase().split(/[\s/]+/);
+  const words = norm.split(' ').filter(w=>w && !GENERIC_FILLER_WORDS.has(w) && !catWords.includes(w));
+  return words.length < 2;   // fewer than 2 substantive words left over = generic
+}
+// 'missing' | 'generic' | 'real' — the three states everywhere downstream cares about
+function outcomeState(text, catLabel){
+  if(!text || !text.trim()) return 'missing';
+  return looksGenericOutcome(text.trim(), catLabel) ? 'generic' : 'real';
+}
 
 let roster = [];
 let selectedCats = new Set(['meeting']); // single-select: one activity per time block
@@ -2121,14 +2166,17 @@ function renderCEO(){
     });
   }));
   const meetBlocks = accBlocks.filter(x=>x.b.cat==='meeting' || x.b.cat==='ho' || x.b.cat==='call');
-  const hasOutcome = x => !!(x.b.outcome && x.b.outcome.trim());
+  // rank: missing=0, generic=1, real=2 — lets one sort() cover all three states
+  const outRank = x => ({missing:0, generic:1, real:2})[outcomeState(x.b.outcome, catMap[x.b.cat].label)];
   const mCount = meetBlocks.length;
   const mMin = meetBlocks.reduce((s,x)=>s+x.b.dur,0);
   const avgLen = mCount>0 ? Math.round(mMin/mCount) : null;
-  const accWithOutcome = accBlocks.filter(hasOutcome).length;
+  const accWithOutcome = accBlocks.filter(x=>outRank(x)===2).length;   // only genuine outcomes count
+  const accGeneric = accBlocks.filter(x=>outRank(x)===1).length;
   const accOutcomePct = accBlocks.length>0 ? Math.round(accWithOutcome/accBlocks.length*100) : null;
   document.getElementById('ceoMeetKpis').innerHTML = accBlocks.length>0 ? `
-    <div class="kpi"><div class="num">${accOutcomePct}%</div><div class="lbl">Outcome Recorded (all work)</div></div>
+    <div class="kpi"><div class="num">${accOutcomePct}%</div><div class="lbl">Genuine Outcomes Recorded</div></div>
+    <div class="kpi"><div class="num">${accGeneric}</div><div class="lbl">Generic ("done"-style)</div></div>
     <div class="kpi"><div class="num">${mCount}</div><div class="lbl">Meetings + Calls</div></div>
     <div class="kpi"><div class="num">${fmtH(mMin)}</div><div class="lbl">Meeting/Call Hours</div></div>
     <div class="kpi"><div class="num">${avgLen!==null?avgLen+'m':'—'}</div><div class="lbl">Avg Length</div></div>
@@ -2168,19 +2216,21 @@ function renderCEO(){
   const feed = accBlocks
     .filter(x=>(pFilter==='all' || x.p.id===pFilter) && (cFilter==='all' || x.b.cat===cFilter))
     .sort((a,b)=>{
-      const am = hasOutcome(a) ? 1 : 0;
-      const bm = hasOutcome(b) ? 1 : 0;
-      if(am!==bm) return am-bm;                 // missing outcomes first
+      const ar = outRank(a), br = outRank(b);
+      if(ar!==br) return ar-br;                 // missing, then generic, then real
       return b.date.localeCompare(a.date);      // then newest
     }).slice(0, filtered ? 40 : 12);
   document.getElementById('ceoOutcomes').innerHTML = feed.length
     ? feed.map(x=>{
-        const hasOut = hasOutcome(x);
+        const st = outcomeState(x.b.outcome, catMap[x.b.cat].label);
         const dd = new Date(x.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+        const outLine = st==='real' ? `→ ${x.b.outcome}`
+          : st==='generic' ? `→ ${x.b.outcome} <span style="color:#8B6B1A;font-weight:600;">⚠ looks generic — ask for specifics</span>`
+          : `→ No outcome recorded`;
         return `<div class="outcome-row">
           <div class="om-head">${x.p.name} · ${dd} · ${catMap[x.b.cat].label} (${fmtHM(x.b.dur)})${x.b.site?` · ${x.b.site}`:''}${x.b.who?` — with ${x.b.who}`:''}${(!x.b.who && x.b.note)?` — ${x.b.note}`:''}</div>
           ${x.b.agenda?`<div class="om-agenda">Agenda: ${x.b.agenda}</div>`:''}
-          <div class="om-out ${hasOut?'':'missing'}">${hasOut?'→ '+x.b.outcome:'→ No outcome recorded'}</div>
+          <div class="om-out ${st==='missing'?'missing':''}">${outLine}</div>
         </div>`;
       }).join('')
     : `<div class="empty-note">${filtered?'Nothing logged this week for this filter.':'No work logged this week yet.'}</div>`;
@@ -2193,7 +2243,7 @@ function renderCEO(){
     let topMin = 0;
     CATS.forEach(c=>{ if((s.catMin[c.k]||0) > topMin){ topMin = s.catMin[c.k]; topCat = c.label; } });
     const myAcc = accBlocks.filter(x=>x.p.id===p.id);
-    const outPct = myAcc.length>0 ? Math.round(myAcc.filter(hasOutcome).length/myAcc.length*100) : null;
+    const outPct = myAcc.length>0 ? Math.round(myAcc.filter(x=>outRank(x)===2).length/myAcc.length*100) : null;
     return {p, s, eff, topCat, topMin, outPct};
   }).sort((a,b)=>b.s.totalMin - a.s.totalMin);
 
@@ -2294,13 +2344,20 @@ function renderCEO(){
       flags.push({name:r.p.name, msg:`${advanceCount} block${advanceCount>1?'s':''} across ${advanceDays} day${advanceDays>1?'s':''} logged well before they'd have finished — check whether the day is being filled in advance.`});
     }
   });
-  // Logged work with no outcome recorded — accountability gap, per person
-  const noOutBy = {};
+  // Logged work with no outcome at all, and separately, work with only a
+  // generic ("meeting done") outcome — both are accountability gaps, but
+  // worth naming differently since the conversation with each is different.
+  const noOutBy = {}, genericBy = {};
   accBlocks.forEach(x=>{
-    if(!hasOutcome(x)) noOutBy[x.p.name] = (noOutBy[x.p.name]||0)+1;
+    const st = outcomeState(x.b.outcome, catMap[x.b.cat].label);
+    if(st==='missing') noOutBy[x.p.name] = (noOutBy[x.p.name]||0)+1;
+    if(st==='generic') genericBy[x.p.name] = (genericBy[x.p.name]||0)+1;
   });
   Object.entries(noOutBy).forEach(([name,n])=>{
     flags.push({name, msg:`${n} logged block${n>1?'s':''} this week with no outcome recorded — what did the time produce?`});
+  });
+  Object.entries(genericBy).forEach(([name,n])=>{
+    flags.push({name, msg:`${n} outcome${n>1?'s read':' reads'} as a generic box-tick ("meeting done"-style) rather than a real result — worth asking for specifics.`});
   });
   // Task backlog discipline: nothing on the list at all, or overdue items piling up
   taskRows.forEach(r=>{
@@ -2536,6 +2593,14 @@ const WORKDAY_TOTAL_MIN = 540;      // 9 hours
 const LUNCH_MIN          = 20;
 const EXPECTED_WORK_MIN  = WORKDAY_TOTAL_MIN - LUNCH_MIN; // 520 min/day
 const UTIL_GATE          = 0.60;    // below this, score <= utilization%
+// Genuine hours beyond the standard day are recognised, not just tolerated
+// — someone averaging 11-12h days is sacrificing real personal time compared
+// to someone who exactly meets the standard, and that difference should show.
+// Capped so no one can chase an ever-inflating score by claiming implausible
+// hours: +50% over standard (~13h/day average) earns the full bonus; more
+// than that earns no further credit.
+const EXTRA_EFFORT_MAX_BONUS = 10;        // max score points earnable this way
+const EXTRA_EFFORT_CEILING_RATIO = 0.5;   // +50% over standard = full bonus
 // What one hour of each activity is worth. Travel is real work but buys
 // nothing — it is the number a leader can actually shrink by batching visits.
 const LEVERAGE = {
@@ -2625,13 +2690,24 @@ function personWeek(pid, offset){
   // The gate: log under 60% of a standard day and the score is capped at
   // that same percentage, whatever the quality of the hours you did log.
   // This is what stops "one great 2-hour task" from outscoring a full day.
-  const score = (rawScore !== null && utilization !== null && utilization < UTIL_GATE)
+  const baseScore = (rawScore !== null && utilization !== null && utilization < UTIL_GATE)
     ? Math.min(rawScore, Math.round(100 * utilization))
     : rawScore;
 
+  // Extra-effort bonus, added on top of the normal 0-100 score, never
+  // instead of it — a gate case (low utilization) never triggers this,
+  // since it only fires when logged hours EXCEED the standard.
+  const expectedTotal = EXPECTED_WORK_MIN * elapsed;
+  const extraMin = (elapsed > 0 && workMin > expectedTotal) ? workMin - expectedTotal : 0;
+  const extraRatio = expectedTotal > 0 ? extraMin / expectedTotal : 0;
+  const extraBonus = baseScore !== null
+    ? Math.round(EXTRA_EFFORT_MAX_BONUS * Math.min(1, extraRatio / EXTRA_EFFORT_CEILING_RATIO))
+    : 0;
+  const score = baseScore !== null ? baseScore + extraBonus : null;
+
   return {dates, elapsed, catMin, totalMin, workMin, accTot, outTot, accMin, blocks,
           maxDur, days, planned, done, overdue, exec, outcome, discipline, leverage,
-          focusAvg, utilization, score};
+          focusAvg, utilization, baseScore, extraMin, extraBonus, score};
 }
 
 // ---- Your own best weeks become the benchmark. No invented targets.
@@ -2675,7 +2751,7 @@ function scoreMoves(pid){
       SCORE_W.utilization * v
     );
     const atFull = Math.round(100 * weighted(1));
-    const gain = Math.max(0, atFull - (s.score||0));
+    const gain = Math.max(0, atFull - (s.baseScore||0));
     if(gain > 0){
       const missingMin = Math.max(0, Math.round(EXPECTED_WORK_MIN*s.elapsed - s.workMin));
       moves.push({
@@ -2788,6 +2864,10 @@ function focusInsights(pid){
   } else if(cur.utilization !== null && cur.utilization < 0.85){
     out.push({tone:'watch', title:`${Math.round(cur.utilization*100)}% of a standard day logged this week`,
       body:`A full day is ${fmtH(EXPECTED_WORK_MIN)} (9h minus a 20-min lunch). Closing this gap is worth real points — see Move My Score.`});
+  }
+  if(cur.extraBonus > 0){
+    out.push({tone:'good', title:`${fmtH(cur.extraMin)} beyond a standard week — recognised, not just logged`,
+      body:`+${cur.extraBonus} point${cur.extraBonus>1?'s':''} added on top of your regular score for the real hours put in above the standard day.`});
   }
 
   if(cur.planned === 0){
@@ -2976,6 +3056,7 @@ renderMyStats = async function(){
   document.getElementById('myKpis').innerHTML = `
     <div class="kpi"><div class="num">${s.score !== null ? s.score : '—'}</div><div class="lbl">Productivity Score</div></div>
     <div class="kpi"><div class="num">${pctOrDash(s.utilization)}</div><div class="lbl">Hours vs Standard Day</div></div>
+    <div class="kpi"><div class="num">${s.extraBonus>0 ? '+'+fmtH(s.extraMin) : '—'}</div><div class="lbl">Extra Effort${s.extraBonus>0?` (+${s.extraBonus} pts)`:''}</div></div>
     <div class="kpi"><div class="num">${s.planned ? s.done + '/' + s.planned : '—'}</div><div class="lbl">Tasks Resolved</div></div>
     <div class="kpi"><div class="num">${pctOrDash(s.outcome)}</div><div class="lbl">Outcomes Recorded</div></div>
     <div class="kpi"><div class="num">${pctOrDash(s.leverage)}</div><div class="lbl">Leverage Mix</div></div>
