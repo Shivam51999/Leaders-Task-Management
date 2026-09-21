@@ -537,6 +537,53 @@ table.grid-table td{
 .copy-diff{font-family:'IBM Plex Mono',monospace;font-weight:600;}
 .copy-more{color:#B03A2E;}
 .copy-less{color:#4B7355;}
+
+/* ---- v2.4 Task Control Room (CEO) ---- */
+.tl-group-hdr{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:16px 0 4px;padding-bottom:4px;border-bottom:1.5px solid var(--ink);}
+.tl-group-hdr:first-child{margin-top:0;}
+.tl-group-hdr .tg-name{font-family:'Fraunces',serif;font-size:14px;font-weight:700;}
+.tl-group-hdr .tg-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:.5px;}
+.tl-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+.tl-row:last-child{border-bottom:none;}
+.tl-row.is-overdue{background:rgba(176,58,46,.05);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:5px;}
+.tl-row .tl-txt{font-size:13px;line-height:1.45;font-weight:600;}
+.tl-row .tl-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--grey);margin-top:3px;line-height:1.6;}
+.tl-row .tl-res{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+.tl-right{flex-shrink:0;display:flex;align-items:center;gap:6px;}
+.age-pill{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:3px 7px;border-radius:7px;background:var(--paper-dark);color:var(--ink-soft);white-space:nowrap;}
+.age-pill.a-warn{background:#F5EEDC;color:#8B6B1A;}
+.age-pill.a-bad{background:#F3E2DE;color:#B03A2E;}
+.tag-silent{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.3px;padding:1px 6px;border-radius:8px;background:#5C5B8A;color:#fff;text-transform:none;}
+.tag-moved{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.3px;padding:1px 6px;border-radius:8px;background:#C9A227;color:#4A3B05;text-transform:none;}
+.bucket-bar{display:flex;height:26px;border-radius:6px;overflow:hidden;margin-top:8px;border:1px solid var(--line);}
+.bucket-seg{display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:#fff;}
+.bucket-key{display:flex;flex-wrap:wrap;gap:12px;margin-top:7px;font-size:11px;color:var(--ink-soft);}
+.bucket-key span{display:flex;align-items:center;gap:5px;}
+.bucket-key i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+.risk-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+.risk-row:last-child{border-bottom:none;}
+.risk-score{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;border-radius:7px;padding:5px 9px;min-width:46px;text-align:center;}
+.risk-hi{background:#F3E2DE;color:#B03A2E;}
+.risk-md{background:#F5EEDC;color:#8B6B1A;}
+.risk-lo{background:#E4EBE1;color:#4B7355;}
+.rk-why{font-size:11.5px;color:var(--grey);margin-top:2px;line-height:1.5;}
+.agenda-box{border:1px solid var(--line);border-radius:8px;padding:11px 13px;margin-bottom:8px;background:var(--paper);}
+.agenda-box .ag-name{font-family:'Fraunces',serif;font-size:14px;font-weight:700;margin-bottom:4px;}
+.agenda-box ul{margin:0;padding-left:17px;}
+.agenda-box li{font-size:12.5px;line-height:1.6;margin-bottom:2px;}
+.row3{display:flex;gap:10px;flex-wrap:wrap;}
+.row3 > div{flex:1;min-width:150px;}
+.pred-table tr.click-row{cursor:pointer;}
+.pred-table tr.click-row:hover td{background:rgba(0,0,0,.035);}
+/* six CEO tabs no longer fit a phone edge-to-edge — let the bar scroll */
+@media (max-width:640px){
+  .tabs{overflow-x:auto; overflow-y:hidden; scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{flex:0 0 auto; white-space:nowrap; padding-left:15px; padding-right:15px; font-size:12.5px;}
+  #tab-tasks .filter-row{flex-wrap:wrap;}
+  #tab-tasks .filter-row > div{flex:1 1 45%;}
+  #tab-tasks .pred-table{font-size:11px;}
+}
 </style>
 </head>
 <body>
@@ -812,6 +859,27 @@ table.grid-table td{
     </div>
 
     <div class="card">
+      <h2>Task Backlog — Open &amp; Recently Resolved</h2>
+      <table class="pred-table" id="ceoPlanTable"></table>
+      <div class="hint">Open tasks count against the score until resolved, however old. Resolved tasks age out of "Done" after 30 days so the number reflects recent cadence, not a lucky quarter. To assign, drill into one manager, or see every pending task, use the <strong>Tasks</strong> tab.</div>
+    </div>
+
+    <div class="card">
+      <h2>Needs Attention</h2>
+      <div id="ceoFlags"></div>
+    </div>
+  </div>
+
+  <!-- TASKS TAB (CEO) — v2.4 Task Control Room: assign, drill down, and read the intelligence -->
+  <div id="tab-tasks" style="display:none;">
+
+    <div class="card">
+      <h2>Task Control Room</h2>
+      <div class="kpi-strip" id="tcKpis"></div>
+      <div id="tcDiag"></div>
+    </div>
+
+    <div class="card">
       <h2>Assign a Task</h2>
       <div class="hint" style="margin-top:0;">Goes straight into that manager's My Week tab. Only you can delete a task once it's assigned — managers mark it Done, Moved or Dropped instead.</div>
       <label style="margin-top:0;">Manager</label>
@@ -824,23 +892,102 @@ table.grid-table td{
           <select id="assignPeriod"><option value="weekly">Weekly (due in 7 days)</option><option value="monthly">Monthly (due in 30 days)</option></select>
         </div>
       </div>
+      <label>Due date (optional — overrides the timeframe above)</label>
+      <input type="date" id="assignDue">
       <button class="add-btn" id="assignTaskBtn">Assign Task</button>
       <div id="assignStatus"></div>
     </div>
 
     <div class="card">
-      <h2>Task Backlog — Open &amp; Recently Resolved</h2>
-      <table class="pred-table" id="ceoPlanTable"></table>
-      <label style="margin-top:10px;">See one manager's full task list</label>
-      <select id="ceoPlanPerson" onchange="renderCEO()"><option value="">— Select manager —</option></select>
-      <div id="ceoPlanItems"></div>
-      <div class="hint">Open tasks count against the score until resolved, however old. Resolved tasks age out of "Done" after 30 days so the number reflects recent cadence, not a lucky quarter. Delete (✕) is CEO-only.</div>
+      <h2>Who Is Holding What</h2>
+      <div class="hint" style="margin-top:0;">Every manager, sorted by the size of their pending pile. Tap any row to filter the list below to just that person.</div>
+      <table class="pred-table" id="tcScoreTable"></table>
+      <div class="hint">On-time % = of tasks closed in the last 90 days, how many were closed on or before the due date. Avg close = average days from assignment to Done. Reliability blends closure rate, on-time rate and how old the pending pile is.</div>
     </div>
 
     <div class="card">
-      <h2>Needs Attention</h2>
-      <div id="ceoFlags"></div>
+      <h2>All Tasks — Drill Down</h2>
+      <div class="filter-row">
+        <div>
+          <label style="margin-top:0;">Manager</label>
+          <select id="tcPerson" onchange="renderTaskControl()"><option value="all">All managers</option></select>
+        </div>
+        <div>
+          <label style="margin-top:0;">Status</label>
+          <select id="tcStatus" onchange="renderTaskControl()">
+            <option value="open">Pending (open + moved)</option>
+            <option value="overdue">Overdue only</option>
+            <option value="moved">Pushed / Moved</option>
+            <option value="done">Done</option>
+            <option value="dropped">Dropped</option>
+            <option value="all">Everything</option>
+          </select>
+        </div>
+        <div>
+          <label style="margin-top:0;">Source</label>
+          <select id="tcSource" onchange="renderTaskControl()">
+            <option value="all">All tasks</option>
+            <option value="ceo">Assigned by you</option>
+            <option value="self">Self-added by manager</option>
+          </select>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div>
+          <label style="margin-top:0;">Category</label>
+          <select id="tcCat" onchange="renderTaskControl()"><option value="all">All categories</option></select>
+        </div>
+        <div>
+          <label style="margin-top:0;">Age</label>
+          <select id="tcAge" onchange="renderTaskControl()">
+            <option value="0">Any age</option>
+            <option value="7">Older than 7 days</option>
+            <option value="15">Older than 15 days</option>
+            <option value="30">Older than 30 days</option>
+          </select>
+        </div>
+        <div>
+          <label style="margin-top:0;">Sort by</label>
+          <select id="tcSort" onchange="renderTaskControl()">
+            <option value="age">Oldest first</option>
+            <option value="due">Due date</option>
+            <option value="person">Manager</option>
+            <option value="recent">Recently updated</option>
+          </select>
+        </div>
+      </div>
+      <input type="text" id="tcSearch" placeholder="Search task text…" oninput="renderTaskControl()">
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="small-btn" id="tcClearBtn">Clear filters</button>
+        <button type="button" class="small-btn" id="tcCopyBtn">Copy list</button>
+      </div>
+      <div id="tcList" style="margin-top:12px;"></div>
+      <div class="hint">✕ deletes a task permanently and is CEO-only. "Silent" means the manager has logged no time at all under that task's category since it was assigned.</div>
     </div>
+
+    <div class="card">
+      <h2>Ageing — Where the Pile Is Rotting</h2>
+      <div id="tcAgeing"></div>
+    </div>
+
+    <div class="card">
+      <h2>Slippage Risk — Likely to Be Missed</h2>
+      <div class="hint" style="margin-top:0;">Scored on how overdue it already is, how long that manager usually takes to close this kind of task, whether it has been pushed before, and whether any time has actually gone into it.</div>
+      <div id="tcRisk"></div>
+    </div>
+
+    <div class="card">
+      <h2>Your Review Agenda</h2>
+      <div class="hint" style="margin-top:0;">The three things worth asking each manager this week, built from their own backlog. Copy it and take it into the review.</div>
+      <div style="margin:8px 0;"><button type="button" class="small-btn" id="tcAgendaCopy">Copy agenda</button></div>
+      <div id="tcAgenda"></div>
+    </div>
+
+    <div class="card">
+      <h2>Read of the Backlog</h2>
+      <div id="tcInsights"></div>
+    </div>
+
   </div>
 
   <!-- CALENDAR TAB (CEO) — where time flows, per manager / activity / site -->
@@ -986,6 +1133,15 @@ function ingest(data){
     plansIndex[pl.personId + '|' + pl.weekStart] = pl.items || [];
   });
   tasksList = data.tasks || [];
+}
+
+// Person IDs arrive from the sheet and can come back as a number on one row
+// and a string on another (and a <select> value is ALWAYS a string). Strict
+// === then silently matches nothing, which is exactly how a manager's tasks
+// can exist in the sheet yet show as zero on screen. Compare as text.
+function sameId(a, b){
+  const x = String(a==null?'':a).trim(), y = String(b==null?'':b).trim();
+  return x !== '' && x === y;
 }
 
 async function refreshData(){
@@ -1171,11 +1327,12 @@ const MANAGER_TABS = [
 const CEO_TABS = [
   {id:'team', label:'Team View'},
   {id:'ceo', label:'CEO View'},
+  {id:'tasks', label:'Tasks'},
   {id:'cal', label:'Calendar'},
   {id:'dash', label:'Dashboard'},
   {id:'roster', label:'Team List'}
 ];
-const ALL_TAB_IDS = ['log','plan','mystats','team','dash','ceo','cal','roster'];
+const ALL_TAB_IDS = ['log','plan','mystats','team','dash','ceo','tasks','cal','roster'];
 
 function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
@@ -1217,7 +1374,7 @@ async function openTab(tabId, btnEl){
 
   // refresh from sheet for the data-heavy views (and My Day, so a phone
   // kept open all day never shows a stale morning snapshot)
-  if(['team','dash','ceo','cal','mystats','log','plan'].includes(tabId)){
+  if(['team','dash','ceo','tasks','cal','mystats','log','plan'].includes(tabId)){
     try{ await refreshData(); }
     catch(e){ setSyncNote('Could not refresh from Google Sheet — showing last loaded data.'); }
   }
@@ -1225,6 +1382,7 @@ async function openTab(tabId, btnEl){
   if(tabId==='team') renderTeamGrid();
   if(tabId==='dash') renderDashboard();
   if(tabId==='ceo') renderCEO();
+  if(tabId==='tasks') renderTaskControl();
   if(tabId==='cal') renderCal();
   if(tabId==='mystats') renderMyStats();
   if(tabId==='roster') renderRosterList();
@@ -1531,11 +1689,11 @@ function prefillStart(){
 // manager who added something by mistake marks it Dropped instead.
 
 function myOpenTasks(){
-  return tasksList.filter(t=>t.personId===auth.person.id && (t.status==='planned'||t.status==='moved'));
+  return tasksList.filter(t=>sameId(t.personId, auth.person.id) && (t.status==='planned'||t.status==='moved'));
 }
 function myResolvedTasks(){
-  return tasksList.filter(t=>t.personId===auth.person.id && (t.status==='done'||t.status==='dropped'))
-    .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  return tasksList.filter(t=>sameId(t.personId, auth.person.id) && (t.status==='done'||t.status==='dropped'))
+    .sort((a,b)=>(dayNum(b.updatedAt)||0) - (dayNum(a.updatedAt)||0));
 }
 
 function renderTasks(){
@@ -1551,7 +1709,7 @@ function renderTasks(){
     if(aOver !== bOver) return aOver ? -1 : 1;               // overdue first
     const aCeo = a.assignedBy==='ceo', bCeo = b.assignedBy==='ceo';
     if(aCeo !== bCeo) return aCeo ? -1 : 1;                   // CEO-assigned next
-    return (a.createdAt||'').localeCompare(b.createdAt||'');  // then oldest first
+    return (dayNum(a.createdAt)||0) - (dayNum(b.createdAt)||0); // then oldest first
   });
   document.getElementById('taskList').innerHTML = open.length ? open.map(renderTaskItem).join('')
     : `<div class="empty-note">No open tasks. Add one below, or wait for the CEO to assign one.</div>`;
@@ -1635,9 +1793,11 @@ function renderTaskItem(it){
   const c = catMap[it.cat] || {label:it.cat, color:'#888'};
   const today = todayStr();
   const overdue = it.dueDate && it.dueDate < today && (it.status==='planned'||it.status==='moved');
+  const pushes = Number(it.movedCount||0);
   const badges = (it.assignedBy==='ceo' ? `<span class="tag-ceo">Assigned by CEO</span>` : '') +
     (overdue ? `<span class="tag-overdue">Overdue</span>` : '') +
-    `<span class="tag-period">${it.period==='monthly'?'Monthly':'Weekly'}</span>`;
+    (pushes>1 ? `<span class="tag-moved">Pushed ${pushes}\u00D7</span>` : '') +
+    `<span class="tag-period">${it.period==='monthly'?'Monthly':(it.period==='custom'?'Due '+fmtDate(it.dueDate):'Weekly')}</span>`;
   return `<div class="plan-item st-${it.status}">
     <div>
       <div class="pi-cat" style="color:${c.color};">${c.label} ${badges}</div>
@@ -1656,7 +1816,7 @@ function wireTaskButtons(container){
   container.querySelectorAll('.pi-btn').forEach(btn=>btn.addEventListener('click', async e=>{
     const id = e.currentTarget.dataset.id;
     const st = e.currentTarget.dataset.st;
-    const task = tasksList.find(t=>t.id===id);
+    const task = tasksList.find(t=>sameId(t.id, id));
     if(!task) return;
     let status = st, result = task.result;
     if(task.status===st){ status='planned'; result=''; }        // tap active status again to reopen
@@ -1670,7 +1830,11 @@ function wireTaskButtons(container){
     task.status = status; task.result = result;
     renderTasks();
     try{
-      await apiPost({action:'updateTaskStatus', taskId:id, status, result});
+      const res = await apiPost({action:'updateTaskStatus', taskId:id, status, result});
+      // the server owns the push counter — take its number, don't guess one
+      if(res && typeof res.movedCount !== 'undefined') task.movedCount = res.movedCount;
+      if(res && res.dueDate) task.dueDate = res.dueDate;
+      renderTasks();
     }catch(err){
       task.status = prevStatus; task.result = prevResult; // roll back on failure
       renderTasks();
@@ -2073,24 +2237,28 @@ function populateAssignSelects(){
 
 document.getElementById('assignTaskBtn').addEventListener('click', async ()=>{
   const personId = document.getElementById('assignPerson').value;
-  const person = roster.find(p=>p.id===personId);
+  const person = roster.find(p=>sameId(p.id, personId));
   const text = document.getElementById('assignText').value.trim();
   const cat = document.getElementById('assignCat').value;
   const period = document.getElementById('assignPeriod').value;
+  const due = document.getElementById('assignDue').value;   // '' unless set
   if(!person){ alert('Select a manager first — add one in Team List if the list is empty.'); return; }
   if(!text){ alert('Write the task first.'); return; }
+  if(due && due < todayStr() && !confirm('That due date is already in the past — the task will show as overdue the moment it lands. Assign it anyway?')) return;
   const btn = document.getElementById('assignTaskBtn');
   const st = document.getElementById('assignStatus');
   btn.disabled = true;
   st.innerHTML = `<div class="status-msg sync">Assigning…</div>`;
   try{
-    const res = await apiPost({action:'assignTask', personId:person.id, personName:person.name, text, cat, period});
-    tasksList.push({id:res.taskId, personId:person.id, personName:person.name, text, cat, period,
-      assignedBy:'ceo', status:'planned', result:'', dueDate:res.dueDate, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()});
+    const res = await apiPost({action:'assignTask', personId:person.id, personName:person.name, text, cat, period, dueDate:due});
+    tasksList.push({id:res.taskId, personId:person.id, personName:person.name, text, cat, period:res.period||period,
+      assignedBy:'ceo', status:'planned', result:'', dueDate:res.dueDate, movedCount:0,
+      createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()});
     document.getElementById('assignText').value='';
-    st.innerHTML = `<div class="status-msg ok">Assigned to ${person.name}.</div>`;
+    document.getElementById('assignDue').value='';
+    st.innerHTML = `<div class="status-msg ok">Assigned to ${person.name} — due ${fmtDate(res.dueDate)}.</div>`;
     setTimeout(()=>{st.innerHTML='';}, 4000);
-    renderCEO();
+    renderTaskControl();
   }catch(err){
     st.innerHTML = `<div class="status-msg err">${saveErrorMessage(err)}</div>`;
   }
@@ -2107,7 +2275,6 @@ function renderCEO(){
     document.getElementById('ceoOutcomes').innerHTML='';
     document.getElementById('ceoLedger').innerHTML='';
     document.getElementById('ceoPlanTable').innerHTML='';
-    document.getElementById('ceoPlanItems').innerHTML='';
     document.getElementById('ceoFlags').innerHTML='';
     return;
   }
@@ -2273,9 +2440,9 @@ function renderCEO(){
   populateAssignSelects();
   const cutoffISO = (()=>{ const d=new Date(); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10); })();
   const taskRows = roster.map(p=>{
-    const mine = tasksList.filter(t=>t.personId===p.id);
+    const mine = tasksList.filter(t=>sameId(t.personId, p.id));
     const open = mine.filter(t=>t.status==='planned'||t.status==='moved');
-    const doneRecent = mine.filter(t=>t.status==='done' && (t.updatedAt||'').slice(0,10) >= cutoffISO);
+    const doneRecent = mine.filter(t=>t.status==='done' && isoDay(t.updatedAt) >= cutoffISO);
     const dropped = mine.filter(t=>t.status==='dropped');
     const overdue = open.filter(t=>t.dueDate && t.dueDate < todayStr());
     const total = open.length + doneRecent.length;
@@ -2294,38 +2461,8 @@ function renderCEO(){
       <td>${r.donePct!==null?r.donePct+'%':(r.mine.length?'—':'No tasks')}</td>
     </tr>`).join('');
 
-  // Drill-down: one manager's full task list, with a CEO-only delete button
-  const planSel = document.getElementById('ceoPlanPerson');
-  const planPrev = planSel.value || '';
-  planSel.innerHTML = `<option value="">— Select manager —</option>` +
-    roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-  planSel.value = planPrev;
-  const chosen = taskRows.find(r=>r.p.id===planSel.value);
-  const allSorted = chosen ? chosen.mine.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')) : [];
-  document.getElementById('ceoPlanItems').innerHTML = !planSel.value ? '' :
-    (allSorted.length
-      ? allSorted.map(it=>{
-          const c = catMap[it.cat] || {label:it.cat, color:'#888'};
-          const mark = it.status==='done'?'✅':it.status==='moved'?'↪':it.status==='dropped'?'✕':'○';
-          const overdue = it.dueDate && it.dueDate < todayStr() && (it.status==='planned'||it.status==='moved');
-          return `<div class="outcome-row" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-            <div>
-              <div class="om-head">${mark} ${it.text} <span class="om-agenda">· ${c.label} · ${it.status}${it.assignedBy==='ceo'?' · assigned by you':''}${overdue?' · <strong style="color:#B03A2E;">overdue</strong>':''}</span></div>
-              ${it.result?`<div class="om-out">→ ${it.result}</div>`:''}
-            </div>
-            <button type="button" class="ceo-del-btn" data-id="${it.id}" title="Delete this task">✕</button>
-          </div>`;
-        }).join('')
-      : `<div class="empty-note">No tasks — assigned or self-added — for this manager.</div>`);
-  document.querySelectorAll('.ceo-del-btn').forEach(btn=>btn.addEventListener('click', async e=>{
-    const id = e.currentTarget.dataset.id;
-    if(!confirm('Delete this task permanently? This cannot be undone.')) return;
-    try{
-      await apiPost({action:'deleteTask', taskId:id});
-      tasksList = tasksList.filter(t=>t.id!==id);
-      renderCEO();
-    }catch(err){ alert(saveErrorMessage(err)); }
-  }));
+  // (Full drill-down, filters and the intelligence layer now live in the
+  //  Tasks tab — see renderTaskControl().)
 
   // ---- Needs Attention ----
   const flags = [];
@@ -2384,6 +2521,440 @@ function renderCEO(){
     ? flags.map(f=>`<div class="insight-row"><div class="insight-name">${f.name}</div><div class="insight-val" style="text-align:right;">${f.msg}</div></div>`).join('')
     : `<div class="empty-note">Nothing flagged. Clean week so far.</div>`;
 }
+
+// ================= TASK CONTROL ROOM (CEO) — v2.4 =================
+// Answers three questions the old CEO view could not: what is pending with
+// each HOD right now, how old is it, and which of it is actually going to
+// be missed. Everything here is derived client-side from the same tasks +
+// logs the sheet already returns — no backend change required.
+
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function dayNum(iso){
+  if(!iso) return null;
+  const s = String(iso);
+  // Backend v3.1 sends ISO ('2026-09-05T10:30:00'). Older rows cached in a
+  // browser — or an older Code.gs still deployed — can send a locale string
+  // ('Sat Sep 05 2026 ...'), which slicing would turn into nonsense. Take
+  // the ISO fast path, fall back to letting Date parse the rest.
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)){
+    const d = new Date(s.slice(0,10) + 'T00:00:00');
+    return isNaN(d) ? null : Math.floor(d.getTime()/86400000);
+  }
+  const d2 = new Date(s);
+  if(isNaN(d2)) return null;
+  return Math.floor(new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime()/86400000);
+}
+// Normalised 'YYYY-MM-DD' for any timestamp shape, for text comparisons
+// (date windows, sorting) that must not be done on a locale string.
+function isoDay(v){
+  const n = dayNum(v);
+  if(n===null) return '';
+  return new Date(n*86400000).toISOString().slice(0,10);
+}
+function daysSince(iso){
+  const a = dayNum(iso), t = dayNum(todayStr());
+  return a===null ? null : t - a;
+}
+function daysUntil(iso){
+  const a = dayNum(iso), t = dayNum(todayStr());
+  return a===null ? null : a - t;
+}
+function isOpenTask(t){ return t.status==='planned' || t.status==='moved'; }
+function isOverdueTask(t){ return isOpenTask(t) && t.dueDate && t.dueDate < todayStr(); }
+function taskAge(t){ const d = daysSince(t.createdAt); return d===null ? 0 : Math.max(0, d); }
+function catLabel(k){ return (catMap[k] || {label:k||'—'}).label; }
+function fmtDate(iso){
+  const day = isoDay(iso);
+  if(!day) return '—';
+  return new Date(day + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
+}
+
+// Latest date each person logged work under each category, plus the earliest
+// log date we actually hold — used so "no time spent on this yet" is only
+// claimed for tasks created inside the window of logs we can see.
+function buildCatActivity(){
+  const map = {}; let earliest = null;
+  Object.keys(logsIndex).forEach(k=>{
+    const i = k.lastIndexOf('|');
+    const pid = k.slice(0, i), date = k.slice(i+1);
+    if(!earliest || date < earliest) earliest = date;
+    (logsIndex[k] || []).forEach(b=>{
+      map[pid] = map[pid] || {};
+      if(!map[pid][b.cat] || map[pid][b.cat] < date) map[pid][b.cat] = date;
+    });
+  });
+  return {map, earliest};
+}
+// A "silent" task: open, and the manager has logged no time at all under its
+// category since the day it was assigned. Assigned, acknowledged, untouched.
+function isSilent(t, act){
+  if(!isOpenTask(t) || !t.createdAt) return false;
+  const created = isoDay(t.createdAt);
+  if(!created) return false;
+  if(!act.earliest || created < act.earliest) return false;   // can't see far enough back to judge
+  const last = (act.map[String(t.personId)] || {})[t.cat];
+  return !last || last < created;
+}
+
+// Per-manager delivery record. Closure and on-time are read over the last 90
+// days so the number reflects current cadence, not a good quarter in April.
+function taskStatsFor(pid){
+  const cutoff = (()=>{ const d=new Date(); d.setDate(d.getDate()-90); return d.toISOString().slice(0,10); })();
+  const mine = tasksList.filter(t=>sameId(t.personId, pid));
+  const open = mine.filter(isOpenTask);
+  const overdue = open.filter(isOverdueTask);
+  const moved = open.filter(t=>t.status==='moved');
+  const closed = mine.filter(t=>t.status==='done' && isoDay(t.updatedAt) >= cutoff);
+  const dropped = mine.filter(t=>t.status==='dropped' && isoDay(t.updatedAt) >= cutoff);
+  const onTimeSet = closed.filter(t=>t.dueDate);
+  const onTime = onTimeSet.filter(t=>isoDay(t.updatedAt) <= t.dueDate);
+  const onTimePct = onTimeSet.length ? Math.round(onTime.length/onTimeSet.length*100) : null;
+  const closeDays = closed.map(t=>{
+    const a = dayNum(t.createdAt), b = dayNum(t.updatedAt);
+    return (a===null||b===null) ? null : Math.max(0, b-a);
+  }).filter(x=>x!==null);
+  const avgClose = closeDays.length ? Math.round(closeDays.reduce((s,x)=>s+x,0)/closeDays.length) : null;
+  const ages = open.map(taskAge);
+  const avgAge = ages.length ? Math.round(ages.reduce((s,x)=>s+x,0)/ages.length) : 0;
+  const oldest = ages.length ? Math.max(...ages) : 0;
+  const denom = closed.length + open.length;
+  const closureRate = denom ? closed.length/denom : null;
+
+  // Reliability: does work assigned to this person actually close, on time,
+  // without a stale pile building up behind it?
+  let reliability = null;
+  if(denom > 0){
+    const fresh = Math.max(0, Math.min(1, 1 - (avgAge/30)));     // 0 days old = 1, 30+ = 0
+    const ot = onTimePct===null ? (closureRate) : onTimePct/100; // no due-dated closes yet: fall back to closure
+    reliability = Math.round((closureRate*40) + (ot*35) + (fresh*25));
+  }
+  return {mine, open, overdue, moved, closed, dropped, onTimePct, avgClose, avgAge, oldest, closureRate, reliability};
+}
+
+function tcFilterVals(){
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  return {
+    person: g('tcPerson') || 'all',
+    status: g('tcStatus') || 'open',
+    source: g('tcSource') || 'all',
+    cat:    g('tcCat')    || 'all',
+    age:    parseInt(g('tcAge') || '0', 10),
+    sort:   g('tcSort')   || 'age',
+    q:      (g('tcSearch') || '').trim().toLowerCase()
+  };
+}
+
+let tcLastList = [];   // whatever is on screen right now, for "Copy list"
+let tcLastAgenda = '';
+
+function renderTaskControl(){
+  if(!auth || auth.role!=='ceo') return;
+  populateAssignSelects();
+
+  const act = buildCatActivity();
+  const today = todayStr();
+  const nameOf = pid => { const p = roster.find(x=>sameId(x.id, pid)); return p ? p.name : 'Unknown'; };
+
+  // ---- Filter dropdowns (values survive a re-render) ----
+  const pSel = document.getElementById('tcPerson');
+  const pPrev = pSel.value || 'all';
+  pSel.innerHTML = `<option value="all">All managers</option>` +
+    roster.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  pSel.value = pPrev; if(!pSel.value) pSel.value = 'all';
+  const cSel = document.getElementById('tcCat');
+  if(cSel.options.length <= 1){
+    cSel.innerHTML = `<option value="all">All categories</option>` +
+      CATS.filter(c=>!c.hidden).map(c=>`<option value="${c.k}">${c.label}</option>`).join('');
+  }
+  const f = tcFilterVals();
+
+  // ---- Headline numbers across the whole team ----
+  const allOpen = tasksList.filter(isOpenTask);
+  const allOverdue = allOpen.filter(isOverdueTask);
+  const ceoOpen = allOpen.filter(t=>t.assignedBy==='ceo');
+  const silentAll = allOpen.filter(t=>isSilent(t, act));
+  const ages = allOpen.map(taskAge);
+  const avgAge = ages.length ? Math.round(ages.reduce((s,x)=>s+x,0)/ages.length) : 0;
+  const oldest = ages.length ? Math.max(...ages) : 0;
+  document.getElementById('tcKpis').innerHTML = `
+    <div class="kpi"><div class="num">${allOpen.length}</div><div class="lbl">Pending (all HODs)</div></div>
+    <div class="kpi"><div class="num" style="color:${allOverdue.length?'#B03A2E':''};">${allOverdue.length}</div><div class="lbl">Overdue</div></div>
+    <div class="kpi"><div class="num">${ceoOpen.length}</div><div class="lbl">Assigned by You, Open</div></div>
+    <div class="kpi"><div class="num">${silentAll.length}</div><div class="lbl">Not Started</div></div>
+    <div class="kpi"><div class="num">${avgAge}d</div><div class="lbl">Avg Age</div></div>
+    <div class="kpi"><div class="num">${oldest}d</div><div class="lbl">Oldest Pending</div></div>
+  `;
+  document.getElementById('tcDiag').innerHTML =
+    (roster.length && tasksList.length===0)
+      ? `<div class="status-msg err" style="margin-top:10px;">The sheet returned no tasks at all for the CEO login. If tasks have been assigned, the backend is filtering them out — check that the CEO branch of <strong>readTasks()</strong> in Code.gs returns every row, not only rows matching the logged-in person.</div>`
+      : '';
+
+  // ---- Who is holding what ----
+  const rows = roster.map(p=>({p, s: taskStatsFor(p.id)}))
+    .sort((a,b)=>(b.s.overdue.length*10 + b.s.open.length) - (a.s.overdue.length*10 + a.s.open.length));
+  document.getElementById('tcScoreTable').innerHTML =
+    `<tr><th>Manager</th><th>Pending</th><th>Overdue</th><th>Oldest</th><th>Closed 90d</th><th>On-time</th><th>Avg close</th><th>Reliability</th></tr>` +
+    rows.map(r=>`<tr class="click-row" data-pid="${r.p.id}">
+      <td class="pred-name">${esc(r.p.name)}</td>
+      <td>${r.s.open.length || '—'}</td>
+      <td>${r.s.overdue.length ? `<strong style="color:#B03A2E;">${r.s.overdue.length}</strong>` : '—'}</td>
+      <td>${r.s.oldest ? r.s.oldest+'d' : '—'}</td>
+      <td>${r.s.closed.length || '—'}</td>
+      <td>${r.s.onTimePct!==null ? r.s.onTimePct+'%' : '—'}</td>
+      <td>${r.s.avgClose!==null ? r.s.avgClose+'d' : '—'}</td>
+      <td>${r.s.reliability!==null ? `<span class="pill ${r.s.reliability>=70?'ok':'warn'}">${r.s.reliability}</span>` : '<span style="color:var(--grey);">no data</span>'}</td>
+    </tr>`).join('');
+  document.querySelectorAll('#tcScoreTable .click-row').forEach(tr=>tr.addEventListener('click', ()=>{
+    document.getElementById('tcPerson').value = tr.dataset.pid;
+    document.getElementById('tcStatus').value = 'open';
+    renderTaskControl();
+    document.getElementById('tcList').scrollIntoView({behavior:'smooth', block:'center'});
+  }));
+
+  // ---- The drill-down list ----
+  let list = tasksList.filter(t=>{
+    if(f.person!=='all' && !sameId(t.personId, f.person)) return false;
+    if(f.status==='open'     && !isOpenTask(t)) return false;
+    if(f.status==='overdue'  && !isOverdueTask(t)) return false;
+    if(f.status==='moved'    && t.status!=='moved') return false;
+    if(f.status==='done'     && t.status!=='done') return false;
+    if(f.status==='dropped'  && t.status!=='dropped') return false;
+    if(f.source==='ceo'  && t.assignedBy!=='ceo') return false;
+    if(f.source==='self' && t.assignedBy==='ceo') return false;
+    if(f.cat!=='all' && t.cat!==f.cat) return false;
+    if(f.age > 0 && taskAge(t) <= f.age) return false;
+    if(f.q && !String(t.text||'').toLowerCase().includes(f.q)) return false;
+    return true;
+  });
+  const sorters = {
+    age:    (a,b)=> taskAge(b) - taskAge(a),
+    due:    (a,b)=> String(a.dueDate||'9999').localeCompare(String(b.dueDate||'9999')),
+    person: (a,b)=> nameOf(a.personId).localeCompare(nameOf(b.personId)) || taskAge(b)-taskAge(a),
+    recent: (a,b)=> (dayNum(b.updatedAt)||0) - (dayNum(a.updatedAt)||0)
+  };
+  list = list.sort(sorters[f.sort] || sorters.age);
+  tcLastList = list;
+
+  const box = document.getElementById('tcList');
+  if(!list.length){
+    box.innerHTML = `<div class="empty-note">Nothing matches these filters.${tasksList.length? '' : ' No tasks have been created yet.'}</div>`;
+  } else {
+    const renderRow = t=>{
+      const over = isOverdueTask(t);
+      const dOver = over ? -daysUntil(t.dueDate) : 0;
+      const age = taskAge(t);
+      const silent = isSilent(t, act);
+      const mark = t.status==='done'?'✅':t.status==='moved'?'↪':t.status==='dropped'?'✕':'○';
+      const ageCls = age>30 ? 'a-bad' : age>15 ? 'a-warn' : '';
+      return `<div class="tl-row ${over?'is-overdue':''}">
+        <div style="min-width:0;">
+          <div class="tl-txt">${mark} ${esc(t.text)}${t.assignedBy==='ceo'?'<span class="tag-ceo">YOU</span>':''}${over?`<span class="tag-overdue">${dOver}D LATE</span>`:''}${t.status==='moved'?`<span class="tag-moved">PUSHED${Number(t.movedCount||0)>1?' \u00D7'+t.movedCount:''}</span>`:''}${silent?'<span class="tag-silent">NOT STARTED</span>':''}</div>
+          <div class="tl-meta">${esc(nameOf(t.personId))} · ${catLabel(t.cat)} · ${t.period||'weekly'} · given ${fmtDate(t.createdAt)} · due ${fmtDate(t.dueDate)}${t.status==='done'?' · closed '+fmtDate(t.updatedAt):''}</div>
+          ${t.result?`<div class="tl-res">→ ${esc(t.result)}</div>`:''}
+        </div>
+        <div class="tl-right">
+          <span class="age-pill ${ageCls}">${age}d old</span>
+          <button type="button" class="ceo-del-btn tc-del-btn" data-id="${t.id}" title="Delete this task">✕</button>
+        </div>
+      </div>`;
+    };
+    if(f.sort==='person' || f.person==='all'){
+      const byPerson = {};
+      list.forEach(t=>{ const n = nameOf(t.personId); (byPerson[n] = byPerson[n] || []).push(t); });
+      box.innerHTML = Object.keys(byPerson).sort((a,b)=>byPerson[b].length-byPerson[a].length).map(n=>{
+        const g = byPerson[n];
+        const od = g.filter(isOverdueTask).length;
+        return `<div class="tl-group-hdr"><span class="tg-name">${esc(n)}</span><span class="tg-meta">${g.length} shown${od?` · ${od} overdue`:''}</span></div>` +
+               g.map(renderRow).join('');
+      }).join('');
+    } else {
+      box.innerHTML = list.map(renderRow).join('');
+    }
+  }
+  document.querySelectorAll('.tc-del-btn').forEach(btn=>btn.addEventListener('click', async e=>{
+    const id = e.currentTarget.dataset.id;
+    if(!confirm('Delete this task permanently? This cannot be undone.')) return;
+    try{
+      await apiPost({action:'deleteTask', taskId:id});
+      tasksList = tasksList.filter(t=>!sameId(t.id, id));
+      renderTaskControl();
+    }catch(err){ alert(saveErrorMessage(err)); }
+  }));
+
+  // ---- Ageing buckets ----
+  const buckets = [
+    {label:'0–7 days',   color:'#4B7355', n:0},
+    {label:'8–15 days',  color:'#C9A227', n:0},
+    {label:'16–30 days', color:'#A9552E', n:0},
+    {label:'30+ days',   color:'#B03A2E', n:0}
+  ];
+  const stale = [];
+  allOpen.forEach(t=>{
+    const a = taskAge(t);
+    if(a<=7) buckets[0].n++;
+    else if(a<=15) buckets[1].n++;
+    else if(a<=30) buckets[2].n++;
+    else { buckets[3].n++; stale.push(t); }
+  });
+  const ageBox = document.getElementById('tcAgeing');
+  if(!allOpen.length){
+    ageBox.innerHTML = `<div class="empty-note">Nothing pending anywhere. Either a very good week, or nobody is putting work into the system.</div>`;
+  } else {
+    const staleBy = {};
+    stale.forEach(t=>{ const n = nameOf(t.personId); staleBy[n] = (staleBy[n]||0)+1; });
+    ageBox.innerHTML =
+      `<div class="bucket-bar">` + buckets.filter(b=>b.n>0).map(b=>
+        `<div class="bucket-seg" style="width:${(b.n/allOpen.length*100).toFixed(1)}%;background:${b.color};" title="${b.label}: ${b.n}">${b.n}</div>`
+      ).join('') + `</div>` +
+      `<div class="bucket-key">` + buckets.map(b=>`<span><i style="background:${b.color};"></i>${b.label} — ${b.n}</span>`).join('') + `</div>` +
+      (stale.length
+        ? `<div class="hint" style="margin-top:10px;">Sitting past 30 days: ` +
+          Object.entries(staleBy).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<strong>${esc(n)}</strong> (${c})`).join(', ') +
+          `. Anything this old is either not a real priority or is blocked on something — both need a decision from you, not another reminder.</div>`
+        : `<div class="hint" style="margin-top:10px;">Nothing older than 30 days. The backlog is turning over.</div>`);
+  }
+
+  // ---- Slippage risk ----
+  const statCache = {};
+  const statFor = pid => statCache[pid] || (statCache[pid] = taskStatsFor(pid));
+  const risky = allOpen.map(t=>{
+    const s = statFor(String(t.personId));
+    const age = taskAge(t);
+    const until = t.dueDate ? daysUntil(t.dueDate) : null;
+    const silent = isSilent(t, act);
+    let score = 0; const why = [];
+    if(until!==null && until < 0){ const d = -until; score += Math.min(50, d*4); why.push(`${d} day${d>1?'s':''} past due`); }
+    else if(until!==null && until <= 2 && silent){ score += 28; why.push(`due in ${until} day${until===1?'':'s'} with no work logged yet`); }
+    else if(until!==null && until <= 2){ score += 14; why.push(`due in ${until} day${until===1?'':'s'}`); }
+    if(silent && !(until!==null && until<=2)){ score += 20; why.push('no time logged under this category since it was given'); }
+    const pushes = Number(t.movedCount || (t.status==='moved' ? 1 : 0));
+    if(pushes === 1){ score += 15; why.push('already pushed once'); }
+    else if(pushes > 1){ score += Math.min(30, 15 + (pushes-1)*8); why.push(`pushed ${pushes} times`); }
+    if(age > 30){ score += 15; why.push(`${age} days old`); }
+    else if(age > 15){ score += 8; why.push(`${age} days old`); }
+    if(s.onTimePct!==null && s.onTimePct < 60){ score += Math.round((100-s.onTimePct)/100*15); why.push(`this manager closes on time only ${s.onTimePct}% of the time`); }
+    if(s.avgClose!==null && until!==null && until >= 0 && s.avgClose > until + 3){ score += 12; why.push(`usually takes ~${s.avgClose} days to close, only ${until} left`); }
+    return {t, score: Math.min(100, score), why};
+  }).filter(x=>x.score >= 20).sort((a,b)=>b.score-a.score).slice(0, 12);
+
+  document.getElementById('tcRisk').innerHTML = risky.length
+    ? risky.map(x=>{
+        const cls = x.score>=60?'risk-hi':x.score>=40?'risk-md':'risk-lo';
+        return `<div class="risk-row">
+          <div style="min-width:0;">
+            <div class="tl-txt">${esc(x.t.text)}</div>
+            <div class="tl-meta">${esc(nameOf(x.t.personId))} · ${catLabel(x.t.cat)} · due ${fmtDate(x.t.dueDate)}</div>
+            <div class="rk-why">${esc(x.why.join(' · '))}</div>
+          </div>
+          <div class="risk-score ${cls}">${x.score}</div>
+        </div>`;
+      }).join('')
+    : `<div class="empty-note">Nothing scoring as at-risk right now.</div>`;
+
+  // ---- Review agenda ----
+  const agendaBlocks = [];
+  rows.forEach(r=>{
+    const pts = [];
+    const myOpen = r.s.open;
+    const od = myOpen.filter(isOverdueTask).sort((a,b)=>String(a.dueDate).localeCompare(String(b.dueDate)));
+    if(od.length){
+      const t = od[0];
+      pts.push(`"${t.text}" is ${-daysUntil(t.dueDate)} days past due${od.length>1?` (and ${od.length-1} more overdue)`:''} — what is actually blocking it?`);
+    }
+    const sil = myOpen.filter(t=>isSilent(t, act));
+    if(sil.length) pts.push(`${sil.length} task${sil.length>1?'s have':' has'} had no time logged against ${sil.length>1?'them':'it'} at all — starting with "${sil[0].text}".`);
+    const pushed = myOpen.filter(t=>t.status==='moved' || Number(t.movedCount||0) > 0);
+    const repeat = pushed.filter(t=>Number(t.movedCount||0) > 1);
+    if(repeat.length) pts.push(`${repeat.length} task${repeat.length>1?'s have':' has'} been pushed more than once — "${repeat[0].text}" ${repeat[0].movedCount} times. A date that moves repeatedly was never the real constraint.`);
+    else if(pushed.length) pts.push(`${pushed.length} task${pushed.length>1?'s':''} pushed to a later week — is the original commitment still realistic?`);
+    const veryOld = myOpen.filter(t=>taskAge(t) > 30);
+    if(veryOld.length && pts.length < 3) pts.push(`${veryOld.length} item${veryOld.length>1?'s':''} older than 30 days — close ${veryOld.length>1?'them':'it'} or drop ${veryOld.length>1?'them':'it'}, but don't carry ${veryOld.length>1?'them':'it'} again.`);
+    if(!myOpen.length && !r.s.mine.length) pts.push(`Nothing in the system at all — no assigned work and no self-set priorities. Ask what the week is being run on.`);
+    if(!pts.length && r.s.closed.length >= 2) pts.push(`Closed ${r.s.closed.length} tasks in 90 days${r.s.onTimePct!==null?` at ${r.s.onTimePct}% on time`:''} with nothing overdue — worth saying so out loud.`);
+    if(pts.length) agendaBlocks.push({name:r.p.name, pts: pts.slice(0,3)});
+  });
+  document.getElementById('tcAgenda').innerHTML = agendaBlocks.length
+    ? agendaBlocks.map(b=>`<div class="agenda-box"><div class="ag-name">${esc(b.name)}</div><ul>${b.pts.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></div>`).join('')
+    : `<div class="empty-note">Nothing to raise — no overdue, stalled or untouched work anywhere.</div>`;
+  tcLastAgenda = agendaBlocks.map(b=>`${b.name}\n` + b.pts.map(p=>`  - ${p}`).join('\n')).join('\n\n');
+
+  // ---- Read of the backlog ----
+  const ins = [];
+  if(!tasksList.length){
+    ins.push({k:'warn', t:'Nothing is being tracked', b:'No tasks exist for anyone. Until work is assigned here, none of the accountability above has anything to measure.'});
+  } else {
+    const worst = rows.filter(r=>r.s.overdue.length).sort((a,b)=>b.s.overdue.length-a.s.overdue.length)[0];
+    if(worst) ins.push({k:'warn', t:`${worst.p.name} is carrying the most slipped work`, b:`${worst.s.overdue.length} overdue of ${worst.s.open.length} pending, oldest item ${worst.s.oldest} days old. Either the load is wrong or the commitments are.`});
+    if(silentAll.length) ins.push({k:'warn', t:`${silentAll.length} task${silentAll.length>1?'s have':' has'} had zero time spent on ${silentAll.length>1?'them':'it'}`, b:`Accepted but never started — no block logged under that category since the day it was given. This is the gap between agreeing in a meeting and doing the work.`});
+    const heavy = rows.slice().sort((a,b)=>b.s.open.length-a.s.open.length)[0];
+    const light = rows.filter(r=>r.s.reliability!==null && r.s.reliability>=70 && r.s.open.length<=2).sort((a,b)=>b.s.reliability-a.s.reliability)[0];
+    if(heavy && light && heavy.p.id!==light.p.id && heavy.s.open.length >= light.s.open.length + 4){
+      ins.push({k:'watch', t:'The load is lopsided', b:`${heavy.p.name} is holding ${heavy.s.open.length} open items while ${light.p.name} is at ${light.s.open.length} with a reliability of ${light.s.reliability}. There is capacity on one side of the table.`});
+    }
+    const best = rows.filter(r=>r.s.reliability!==null).sort((a,b)=>b.s.reliability-a.s.reliability)[0];
+    if(best && best.s.reliability >= 70) ins.push({k:'good', t:`${best.p.name} is the most dependable on closure`, b:`Reliability ${best.s.reliability}${best.s.onTimePct!==null?`, ${best.s.onTimePct}% on time`:''}${best.s.avgClose!==null?`, average ${best.s.avgClose} days to close`:''}. Worth naming in front of the others.`});
+    const repeatPushed = allOpen.filter(t=>Number(t.movedCount||0) > 1);
+    if(repeatPushed.length){
+      const byWho = {};
+      repeatPushed.forEach(t=>{ const n = nameOf(t.personId); byWho[n] = (byWho[n]||0)+1; });
+      ins.push({k:'warn', t:`${repeatPushed.length} task${repeatPushed.length>1?'s have':' has'} been pushed more than once`, b:`${Object.entries(byWho).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`${n} (${c})`).join(', ')}. A date that keeps moving means the commitment was never costed — worth fixing the estimate rather than the deadline.`});
+    }
+    const selfSet = tasksList.filter(t=>t.assignedBy!=='ceo').length;
+    const selfPct = Math.round(selfSet/tasksList.length*100);
+    if(selfPct < 30) ins.push({k:'watch', t:'Almost everything here came from you', b:`Only ${selfPct}% of tasks were set by the managers themselves. A leadership team that adds nothing to its own list is waiting for instructions rather than running a function.`});
+    const byCat = {};
+    allOpen.forEach(t=>{ byCat[t.cat] = (byCat[t.cat]||0)+1; });
+    const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+    if(topCat && allOpen.length >= 4 && topCat[1]/allOpen.length >= 0.4){
+      ins.push({k:'watch', t:`${Math.round(topCat[1]/allOpen.length*100)}% of the pending pile sits under ${catLabel(topCat[0])}`, b:`One category is absorbing the backlog. Either it is genuinely the priority this quarter, or it is where work goes to wait.`});
+    }
+    const noTasks = rows.filter(r=>!r.s.mine.length).map(r=>r.p.name);
+    if(noTasks.length) ins.push({k:'watch', t:`${noTasks.length} manager${noTasks.length>1?'s have':' has'} nothing in the system`, b:`${noTasks.join(', ')}. Nothing to review, nothing to score, nothing to hold anyone to.`});
+  }
+  document.getElementById('tcInsights').innerHTML = ins.length
+    ? ins.map(i=>`<div class="ins-card ins-${i.k}"><div class="ins-t">${esc(i.t)}</div><div class="ins-b">${esc(i.b)}</div></div>`).join('')
+    : `<div class="empty-note">Backlog looks healthy — nothing stands out.</div>`;
+}
+
+function tcCopyText(text, btn){
+  const done = ()=>{ const o = btn.textContent; btn.textContent = 'Copied'; setTimeout(()=>{btn.textContent = o;}, 1800); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>alert(text));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ alert(text); }
+    document.body.removeChild(ta);
+  }
+}
+
+document.getElementById('tcClearBtn').addEventListener('click', ()=>{
+  document.getElementById('tcPerson').value = 'all';
+  document.getElementById('tcStatus').value = 'open';
+  document.getElementById('tcSource').value = 'all';
+  document.getElementById('tcCat').value = 'all';
+  document.getElementById('tcAge').value = '0';
+  document.getElementById('tcSort').value = 'age';
+  document.getElementById('tcSearch').value = '';
+  renderTaskControl();
+});
+
+document.getElementById('tcCopyBtn').addEventListener('click', e=>{
+  if(!tcLastList.length){ alert('Nothing in the list to copy.'); return; }
+  const nameOf = pid => { const p = roster.find(x=>sameId(x.id, pid)); return p ? p.name : 'Unknown'; };
+  const txt = tcLastList.map(t=>{
+    const over = isOverdueTask(t) ? ` [${-daysUntil(t.dueDate)}d LATE]` : '';
+    return `${nameOf(t.personId)} — ${t.text} (${catLabel(t.cat)}, due ${fmtDate(t.dueDate)}, ${taskAge(t)}d old)${over}`;
+  }).join('\n');
+  tcCopyText(txt, e.currentTarget);
+});
+
+document.getElementById('tcAgendaCopy').addEventListener('click', e=>{
+  if(!tcLastAgenda){ alert('Nothing to copy yet.'); return; }
+  tcCopyText(tcLastAgenda, e.currentTarget);
+});
 
 // ================= CALENDAR VIEW (CEO) =================
 // A true calendar: columns are days, each task is ONE positioned block whose
