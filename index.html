@@ -584,6 +584,26 @@ table.grid-table td{
   #tab-tasks .filter-row > div{flex:1 1 45%;}
   #tab-tasks .pred-table{font-size:11px;}
 }
+
+/* ---- CEO Hours Comparison tab ---- */
+.hrs-presets{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+.hrs-chip{padding:7px 12px; background:var(--white); border:1.5px solid var(--ink-soft); border-radius:999px; font-family:'Inter',sans-serif; font-weight:600; font-size:12px; color:var(--ink-soft); cursor:pointer;}
+.hrs-chip.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+.hrs-range{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); margin:2px 0 12px;}
+.hrs-legend{display:flex; gap:14px; font-size:11.5px; color:var(--ink-soft); margin-bottom:10px;}
+.hrs-legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px;}
+.hrs-row{margin-bottom:14px;}
+.hrs-row .hrs-role{display:block; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--grey); font-weight:500;}
+.hrs-line{display:flex; align-items:center; gap:8px; margin-top:3px;}
+.hrs-line .hrs-key{width:48px; font-size:10px; color:var(--grey); font-family:'IBM Plex Mono',monospace; flex:none;}
+.hrs-line .tbar-track{flex:1;}
+.hrs-line .hrs-num{width:50px; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; flex:none;}
+.hrs-table td, .hrs-table th{white-space:nowrap;}
+.hrs-table td.hrs-neg{color:var(--grey);}
+.hrs-day-table{width:100%; border-collapse:collapse; font-size:11.5px; margin:2px 0;}
+.hrs-day-table th{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--grey); text-align:left; padding:4px 6px; font-weight:600;}
+.hrs-day-table td{padding:4px 6px; border-top:1px solid var(--line);}
+@media (max-width:560px){ .tabs.tabs-many .tab-btn{font-size:11px; padding:11px 2px;} }
 </style>
 </head>
 <body>
@@ -1038,6 +1058,60 @@ table.grid-table td{
     </div>
   </div>
 
+  <!-- HOURS COMPARISON TAB (CEO) -->
+  <div id="tab-hours" style="display:none;">
+    <div class="card">
+      <h2>Hours Comparison</h2>
+      <div class="hrs-presets" id="hrsPresets">
+        <button type="button" class="hrs-chip" data-p="today">Today</button>
+        <button type="button" class="hrs-chip" data-p="week">This Week</button>
+        <button type="button" class="hrs-chip" data-p="lastweek">Last Week</button>
+        <button type="button" class="hrs-chip" data-p="month">This Month</button>
+        <button type="button" class="hrs-chip" data-p="30">Last 30 Days</button>
+      </div>
+      <div class="filter-row">
+        <div>
+          <label style="margin-top:0;">From (custom range)</label>
+          <input type="date" id="hrsFrom">
+        </div>
+        <div>
+          <label style="margin-top:0;">To</label>
+          <input type="date" id="hrsTo">
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button type="button" class="small-btn" id="hrsApplyRange" style="margin-top:0;">Apply Range</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div>
+          <label style="margin-top:0;">Show</label>
+          <select id="hrsType" onchange="renderHours()">
+            <option value="all">Everyone</option>
+            <option value="Direct">Direct reports</option>
+            <option value="Indirect">Indirect reports</option>
+          </select>
+        </div>
+        <div>
+          <label style="margin-top:0;">Compare by</label>
+          <select id="hrsMode" onchange="renderHours()">
+            <option value="total">Total hours in range</option>
+            <option value="avg">Average per logged day</option>
+          </select>
+        </div>
+      </div>
+      <div class="hrs-range" id="hrsRangeLabel"></div>
+      <div class="hrs-legend"><span><i style="background:#2B4C5C"></i>Logged hours</span><span><i style="background:#C9A227"></i>Presence hours</span></div>
+      <div id="hrsBars"></div>
+    </div>
+    <div class="card">
+      <h2>Side by Side</h2>
+      <div style="overflow-x:auto;">
+        <table class="pred-table hrs-table" id="hrsTable"></table>
+      </div>
+      <div class="hint"><strong>Logged</strong> = time in the work blocks a manager entered (Lunch and Tea Break are not counted, same as the productivity score). <strong>Presence</strong> = from the start of the day's first block to the end of its last block &mdash; the tool has no separate punch-in, so this is worked out from the log itself. <strong>Gap</strong> = presence minus logged: lunch plus any stretch of the day that was never logged. A negative gap means blocks overlap. A manager who forgot to log a day shows fewer days, so check <em>Days</em> before comparing totals. Tap a row for the day-by-day detail. Future dates are not counted.</div>
+    </div>
+  </div>
+
   <!-- ROSTER TAB (CEO) -->
   <div id="tab-roster" style="display:none;">
     <div class="card">
@@ -1329,10 +1403,11 @@ const CEO_TABS = [
   {id:'ceo', label:'CEO View'},
   {id:'tasks', label:'Tasks'},
   {id:'cal', label:'Calendar'},
+  {id:'hours', label:'Hours'},
   {id:'dash', label:'Dashboard'},
   {id:'roster', label:'Team List'}
 ];
-const ALL_TAB_IDS = ['log','plan','mystats','team','dash','ceo','tasks','cal','roster'];
+const ALL_TAB_IDS = ['log','plan','mystats','team','dash','ceo','tasks','cal','hours','roster'];
 
 function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
@@ -1344,6 +1419,7 @@ function enterApp(){
 
   const tabs = isCeo ? CEO_TABS : MANAGER_TABS;
   const bar = document.getElementById('tabBar');
+  bar.classList.toggle('tabs-many', tabs.length > 6);
   bar.innerHTML = tabs.map((t,i)=>`<button class="tab-btn ${i===0?'active':''}" data-tab="${t.id}">${t.label}</button>`).join('');
   bar.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>openTab(btn.dataset.tab, btn));
@@ -1374,7 +1450,7 @@ async function openTab(tabId, btnEl){
 
   // refresh from sheet for the data-heavy views (and My Day, so a phone
   // kept open all day never shows a stale morning snapshot)
-  if(['team','dash','ceo','tasks','cal','mystats','log','plan'].includes(tabId)){
+  if(['team','dash','ceo','tasks','cal','hours','mystats','log','plan'].includes(tabId)){
     try{ await refreshData(); }
     catch(e){ setSyncNote('Could not refresh from Google Sheet — showing last loaded data.'); }
   }
@@ -1384,6 +1460,7 @@ async function openTab(tabId, btnEl){
   if(tabId==='ceo') renderCEO();
   if(tabId==='tasks') renderTaskControl();
   if(tabId==='cal') renderCal();
+  if(tabId==='hours') renderHours();
   if(tabId==='mystats') renderMyStats();
   if(tabId==='roster') renderRosterList();
   if(tabId==='log') loadExistingLog();
@@ -3149,6 +3226,184 @@ function renderCal(){
         }).join('') +
       `<tr><td class="pred-name"><strong>Total</strong></td><td><strong>${fmtH(totalMin)}</strong></td><td></td></tr>`
     : `<tr><td class="empty-note">Nothing logged for this filter in this range.</td></tr>`;
+}
+
+
+// ============================================================================
+// ================= HOURS COMPARISON (CEO) ===================================
+// Compares managers on hours for any date range. Reads only what is already
+// loaded (logsIndex + roster) — no new backend call, nothing is written.
+//   Logged   = sum of work-block durations (Lunch / Tea Break excluded, the
+//              same rule the productivity score uses).
+//   Presence = per day, end of the LAST block minus start of the FIRST block.
+//              The tool stores no punch-in, so presence is derived from the log.
+// ============================================================================
+let hrsPreset = 'week';   // 'today' | 'week' | 'lastweek' | 'month' | '30' | null (custom)
+let hrsRange = null;      // {from,to} when a custom range is applied
+let hrsOpen = null;       // person id whose day-by-day detail is expanded
+const HRS_MAX_DAYS = 92;
+
+function hrsPresetRange(p){
+  const today = todayStr();
+  if(p==='today') return {from:today, to:today};
+  if(p==='lastweek'){ const w = weekDates(-1); return {from:w[0], to:w[6]}; }
+  if(p==='month'){ const n = new Date(); return {from:`${n.getFullYear()}-${pad(n.getMonth()+1)}-01`, to:today}; }
+  if(p==='30') return {from:addDays(today,-29), to:today};
+  const w = weekDates(0); return {from:w[0], to:w[6]};   // 'week' (default)
+}
+function hrsDates(){
+  const r = hrsRange || hrsPresetRange(hrsPreset);
+  const out = []; let d = r.from;
+  while(d <= r.to && out.length < HRS_MAX_DAYS){ out.push(d); d = addDays(d,1); }
+  return out;
+}
+
+document.getElementById('hrsPresets').addEventListener('click', e=>{
+  const b = e.target.closest('.hrs-chip'); if(!b) return;
+  hrsPreset = b.dataset.p; hrsRange = null; hrsOpen = null;
+  document.getElementById('hrsFrom').value = '';
+  document.getElementById('hrsTo').value = '';
+  renderHours();
+});
+document.getElementById('hrsApplyRange').addEventListener('click', ()=>{
+  const f = document.getElementById('hrsFrom').value;
+  const t = document.getElementById('hrsTo').value;
+  if(!f || !t){ alert('Pick both From and To dates.'); return; }
+  if(f > t){ alert('From must be before To.'); return; }
+  const days = Math.round((new Date(t)-new Date(f))/86400000)+1;
+  if(days > HRS_MAX_DAYS){ alert('Maximum range is '+HRS_MAX_DAYS+' days — pick a shorter window.'); return; }
+  hrsRange = {from:f, to:t}; hrsPreset = null; hrsOpen = null;
+  renderHours();
+});
+function hrsToggle(pid){
+  hrsOpen = (hrsOpen === pid) ? null : pid;
+  renderHours();
+}
+
+// One person, one day: logged minutes + first start / last end.
+function hrsDayStats(pid, date){
+  const blks = getBlocks(pid, date);
+  if(!blks || !blks.length) return null;
+  let logged = 0, first = Infinity, last = -Infinity;
+  blks.forEach(b=>{
+    const dur = Number(b.dur) || 0;
+    const st = timeToMin(b.start);
+    let en = timeToMin(b.end);
+    if(en < st) en = st + dur;                 // guard against a malformed block
+    if(!BREAK_CATS.has(b.cat)) logged += dur;
+    if(st < first) first = st;
+    if(en > last) last = en;
+  });
+  if(!isFinite(first) || !isFinite(last)) return null;
+  return {logged, first, last, presence: Math.max(0, last - first)};
+}
+
+function hrsSigned(mins){
+  return mins < 0 ? '\u2212' + fmtH(-mins) : fmtH(mins);
+}
+
+function renderHours(){
+  const barsEl = document.getElementById('hrsBars');
+  const tblEl = document.getElementById('hrsTable');
+  if(!roster.length){
+    barsEl.innerHTML = `<div class="empty-note">Add your team first in the Team List tab.</div>`;
+    tblEl.innerHTML = '';
+    return;
+  }
+
+  document.querySelectorAll('#hrsPresets .hrs-chip').forEach(b=>{
+    b.classList.toggle('active', !hrsRange && b.dataset.p === hrsPreset);
+  });
+
+  const allDates = hrsDates();
+  const today = todayStr();
+  const dates = allDates.filter(d => d <= today);       // future days are not "worked" yet
+  const f = new Date(allDates[0]), l = new Date(allDates[allDates.length-1]);
+  const fmtShort = x => x.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+  document.getElementById('hrsRangeLabel').textContent =
+    fmtShort(f) + ' \u2013 ' + fmtShort(l) + '  \u00B7  ' + dates.length + ' day' + (dates.length===1?'':'s') + ' counted';
+
+  if(!dates.length){
+    barsEl.innerHTML = `<div class="empty-note">This range is entirely in the future \u2014 nothing to compare yet.</div>`;
+    tblEl.innerHTML = '';
+    return;
+  }
+
+  const typeSel = document.getElementById('hrsType').value;
+  const mode = document.getElementById('hrsMode').value;     // 'total' | 'avg'
+
+  const rows = roster
+    .filter(p => typeSel === 'all' || p.type === typeSel)
+    .map(p=>{
+      let logged = 0, presence = 0, days = 0;
+      const daily = [];
+      dates.forEach(d=>{
+        const s = hrsDayStats(p.id, d);
+        if(!s) return;
+        days++; logged += s.logged; presence += s.presence;
+        daily.push({date:d, first:s.first, last:s.last, presence:s.presence, logged:s.logged});
+      });
+      return {p, days, logged, presence, gap: presence - logged,
+              avgLogged: days ? logged/days : 0, avgPresence: days ? presence/days : 0, daily};
+    });
+
+  // Rank by whichever lens is selected; people with no logs sink to the bottom.
+  const keyL = r => mode === 'avg' ? r.avgLogged : r.logged;
+  const keyP = r => mode === 'avg' ? r.avgPresence : r.presence;
+  rows.sort((a,b)=>{
+    if(!a.days !== !b.days) return a.days ? -1 : 1;
+    return (keyL(b) - keyL(a)) || a.p.name.localeCompare(b.p.name);
+  });
+
+  // ---- Bars (shared scale so lengths are comparable across people) ----
+  const maxMin = Math.max(1, ...rows.map(r => Math.max(keyL(r), keyP(r))));
+  barsEl.innerHTML = rows.map(r=>{
+    if(!r.days){
+      return `<div class="hrs-row"><div class="tbar-head"><span class="tb-name">${r.p.name}<span class="hrs-role">${r.p.role||r.p.type}</span></span><span class="tb-val">no logs in range</span></div></div>`;
+    }
+    const wL = Math.max(1, keyL(r)/maxMin*100), wP = Math.max(1, keyP(r)/maxMin*100);
+    return `<div class="hrs-row">
+      <div class="tbar-head"><span class="tb-name">${r.p.name}<span class="hrs-role">${r.p.role||r.p.type}</span></span><span class="tb-val">${r.days} of ${dates.length} day${dates.length===1?'':'s'} logged</span></div>
+      <div class="hrs-line"><span class="hrs-key">Logged</span><div class="tbar-track"><div class="tbar-fill" style="width:${wL}%;background:#2B4C5C;"></div></div><span class="hrs-num">${fmtH(keyL(r))}</span></div>
+      <div class="hrs-line"><span class="hrs-key">Present</span><div class="tbar-track"><div class="tbar-fill" style="width:${wP}%;background:#C9A227;"></div></div><span class="hrs-num">${fmtH(keyP(r))}</span></div>
+    </div>`;
+  }).join('') + `<div class="hint">${mode==='avg' ? 'Bars show the average per day the manager actually logged \u2014 fair when people have different numbers of logged days.' : 'Bars show total hours across the whole range.'}</div>`;
+
+  // ---- Table + team line ----
+  const withData = rows.filter(r => r.days);
+  const tDays = withData.reduce((s,r)=>s+r.days,0);
+  const tLogged = withData.reduce((s,r)=>s+r.logged,0);
+  const tPres = withData.reduce((s,r)=>s+r.presence,0);
+
+  let html = `<tr><th>Manager</th><th>Days</th><th>Logged</th><th>Present</th><th>Gap</th><th>Avg/day logged</th><th>Avg/day present</th></tr>`;
+  rows.forEach(r=>{
+    const open = hrsOpen === r.p.id;
+    html += `<tr class="click-row" onclick="hrsToggle('${r.p.id}')">
+      <td class="pred-name">${r.p.name} <span style="color:var(--grey);font-size:10px;">${open?'\u25B2':'\u25BC'}</span></td>
+      <td>${r.days}/${dates.length}</td>
+      <td>${r.days ? fmtH(r.logged) : '\u2014'}</td>
+      <td>${r.days ? fmtH(r.presence) : '\u2014'}</td>
+      <td class="${r.gap<0?'hrs-neg':''}">${r.days ? hrsSigned(r.gap) : '\u2014'}</td>
+      <td>${r.days ? fmtH(r.avgLogged) : '\u2014'}</td>
+      <td>${r.days ? fmtH(r.avgPresence) : '\u2014'}</td>
+    </tr>`;
+    if(open){
+      const dayRows = r.daily.length ? r.daily.map(x=>{
+        const dd = new Date(x.date);
+        const g = x.presence - x.logged;
+        return `<tr><td>${DAY_LABELS[(dd.getDay()+6)%7]} ${dd.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</td>
+          <td>${fmt12(minToTime(x.first))}</td><td>${fmt12(minToTime(x.last))}</td>
+          <td>${fmtHM(x.presence)}</td><td>${fmtHM(x.logged)}</td><td>${g<0?'\u2212'+fmtHM(-g):fmtHM(g)}</td></tr>`;
+      }).join('') : `<tr><td colspan="6" style="color:var(--grey);">Nothing logged in this range.</td></tr>`;
+      html += `<tr class="sum-detail"><td colspan="7"><table class="hrs-day-table">
+        <tr><th>Day</th><th>First block</th><th>Last block ends</th><th>Present</th><th>Logged</th><th>Gap</th></tr>${dayRows}</table></td></tr>`;
+    }
+  });
+  html += `<tr><td class="pred-name"><strong>Team total</strong></td>
+    <td><strong>${tDays}</strong></td><td><strong>${fmtH(tLogged)}</strong></td><td><strong>${fmtH(tPres)}</strong></td>
+    <td><strong>${hrsSigned(tPres - tLogged)}</strong></td>
+    <td><strong>${tDays ? fmtH(tLogged/tDays) : '\u2014'}</strong></td><td><strong>${tDays ? fmtH(tPres/tDays) : '\u2014'}</strong></td></tr>`;
+  tblEl.innerHTML = html;
 }
 
 // ============================================================================
